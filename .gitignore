@@ -1,0 +1,16 @@
+# System
+.DS_Store
+Thumbs.db
+*.swp
+*.bak
+
+# OS metadata
+Desktop.ini
+
+# IDE
+.vscode/
+.idea/
+*.sublime-*
+
+# v2rayN runtime
+guiNDB.db

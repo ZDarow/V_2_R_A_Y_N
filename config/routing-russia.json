@@ -1,5 +1,6 @@
 {
   "domainStrategy": "IPIfNonMatch",
+  "domainMatcher": "hybrid",
   "rules": [
     {
       "type": "field",
@@ -13,7 +14,12 @@
     },
     {
       "type": "field",
-      "domain": ["geosite:ru-available-only-inside", "domain:ru", "domain:su", "domain:рф"],
+      "domain": ["geosite:category-ads-all"],
+      "outboundTag": "block"
+    },
+    {
+      "type": "field",
+      "domain": ["geosite:ru-available-only-inside", "domain:ru", "domain:su", "domain:xn--p1ai"],
       "outboundTag": "direct"
     },
     {

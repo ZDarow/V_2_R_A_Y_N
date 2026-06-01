@@ -1,16 +1,24 @@
 # System
 .DS_Store
 Thumbs.db
+Desktop.ini
+*~
 *.swp
 *.bak
-
-# OS metadata
-Desktop.ini
 
 # IDE
 .vscode/
 .idea/
 *.sublime-*
 
-# v2rayN runtime
+# v2rayN runtime (создаётся при запуске)
 guiNDB.db
+*.db-journal
+*.db-wal
+
+# Временные файлы
+/tmp/
+
+# Правила (загружаются отдельно)
+rules/geoip.dat
+rules/geosite.dat

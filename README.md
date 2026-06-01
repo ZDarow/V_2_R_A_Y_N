@@ -31,57 +31,52 @@ v2rayN-russia-setup/
 
 ## Системные требования
 
-- **ОС:** Linux (Ubuntu 22.04+, Debian 12+, Fedora 38+, Arch Linux)
-- **Зависимости:** Git, SQLite3, GSettings (GNOME) или KDE Plasma
-- **v2rayN:** Установлен из `.deb` или AppImage (скачать с [releases](https://github.com/2dust/v2rayN/releases))
-- **.NET Runtime:** Установлен (требуется для v2rayN)
+- **ОС:** Linux (Ubuntu 20.04+, Debian 11+, Fedora 38+, Arch Linux)
+- **Архитектура:** x86_64 (amd64) или aarch64 (arm64)
+- **Зависимости:** Git, SQLite3 (устанавливаются автоматически)
+- **.NET Runtime 8.0+** (требуется для v2rayN, устанавливается автоматически на Debian/Ubuntu)
 
-## Быстрая установка
+## Быстрая установка (одной командой)
 
 ```bash
-git clone <repo-url>
-cd v2rayN-russia-setup
-chmod +x install.sh && ./install.sh
+bash <(curl -sSL https://raw.githubusercontent.com/ZDarow/V_2_R_A_Y_N/main/install.sh)
 ```
 
-## Подробное описание шагов
-
-### 1. Установка v2rayN
-
-Скачайте последнюю версию `.deb` с [страницы релизов](https://github.com/2dust/v2rayN/releases) и установите:
+### Или через клонирование
 
 ```bash
-sudo dpkg -i v2rayN*.deb
-sudo apt-get install -f
-```
-
-### 2. Запуск установщика
-
-```bash
-git clone <repo-url>
-cd v2rayN-russia-setup
-chmod +x install.sh
+git clone https://github.com/ZDarow/V_2_R_A_Y_N.git
+cd V_2_R_A_Y_N
 ./install.sh
 ```
 
-Установщик выполнит:
+## Флаги
 
-1. Проверку наличия v2rayN
-2. Клонирование и установку правил geoip/geosite из `runetfreedom/russia-v2ray-rules-dat`
-3. Установку конфигурации роутинга `routing-russia.json`
-4. Установку шаблона Xray-core `config-template-xray.json`
-5. Установку скриптов управления прокси
-6. Импорт подписок в базу v2rayN (SQLite)
-7. Настройку системного прокси (GNOME/KDE)
+| Флаг | Описание |
+|------|----------|
+| `--force-reinstall` | Переустановить v2rayN, даже если уже установлен |
+| `--skip-v2rayn` | Не устанавливать v2rayN (только конфиги и подписки) |
+| `--repo-url <url>` | URL репозитория (по умолчанию: ZDarow/V_2_R_A_Y_N) |
 
-### 3. Ручной импорт подписок
+## Что делает установщик
 
-Если база данных v2rayN ещё не создана, откройте v2rayN, затем выполните скрипт повторно.
+Установщик полностью автоматизирован и не требует участия пользователя:
 
-### 4. Обновление правил
+1. Определяет ОС и архитектуру (x86_64 / aarch64)
+2. Устанавливает зависимости (git, wget, curl, sqlite3, .NET Runtime)
+3. Скачивает последнюю версию v2rayN с GitHub и устанавливает
+4. Клонирует правила geoip/geosite из `runetfreedom/russia-v2ray-rules-dat`
+5. Устанавливает конфигурацию роутинга `routing-russia.json`
+6. Устанавливает шаблон Xray-core с оптимизациями
+7. Импортирует подписки в базу v2rayN (SQLite)
+8. Настраивает системный прокси (GNOME/KDE)
+
+Работает как при локальном запуске, так и через `curl | bash`. Временные файлы автоматически очищаются.
+
+## Обновление правил
 
 ```bash
-./scripts/update-rules.sh
+bash <(curl -sSL https://raw.githubusercontent.com/ZDarow/V_2_R_A_Y_N/main/scripts/update-rules.sh)
 ```
 
 ## Список подписок

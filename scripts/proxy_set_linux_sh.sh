@@ -148,7 +148,6 @@ DE=$(detect_desktop_environment)
 if [ "$DE" == "gnome" ]; then
     set_gnome_proxy "$MODE" "$PROXY_IP" "$PROXY_PORT" "$IGNORE_HOSTS"
 elif [ "$DE" == "kde" ]; then
-    set_gnome_proxy "$MODE" "$PROXY_IP" "$PROXY_PORT" "$IGNORE_HOSTS"
     set_kde_proxy "$MODE" "$PROXY_IP" "$PROXY_PORT" "$IGNORE_HOSTS"
 else
     echo "Unsupported desktop environment: $DE" >&2

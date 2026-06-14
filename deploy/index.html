@@ -1,0 +1,392 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+<title>v2rayNG — установка конфигов РФ</title>
+<style>
+  :root {
+    --bg: #0f1117;
+    --card: #1a1d28;
+    --accent: #6366f1;
+    --accent-hover: #818cf8;
+    --text: #e2e8f0;
+    --text-dim: #94a3b8;
+    --green: #22c55e;
+    --orange: #f59e0b;
+    --red: #ef4444;
+    --radius: 12px;
+  }
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+    background: var(--bg);
+    color: var(--text);
+    padding: 16px 16px 40px;
+    line-height: 1.5;
+    -webkit-tap-highlight-color: transparent;
+  }
+  h1 {
+    font-size: 22px;
+    font-weight: 700;
+    text-align: center;
+    margin: 24px 0 4px;
+    background: linear-gradient(135deg, #6366f1, #a78bfa);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+  }
+  .subtitle {
+    text-align: center;
+    color: var(--text-dim);
+    font-size: 14px;
+    margin-bottom: 24px;
+  }
+  .card {
+    background: var(--card);
+    border-radius: var(--radius);
+    padding: 16px;
+    margin-bottom: 12px;
+    border: 1px solid rgba(255,255,255,0.06);
+  }
+  .card h2 {
+    font-size: 16px;
+    font-weight: 600;
+    margin-bottom: 12px;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+  .card p, .card li {
+    font-size: 13px;
+    color: var(--text-dim);
+  }
+  .card ul { padding-left: 18px; }
+  .card li { margin-bottom: 4px; }
+
+  .btn {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    width: 100%;
+    padding: 12px 14px;
+    margin-bottom: 8px;
+    border: none;
+    border-radius: 8px;
+    font-size: 14px;
+    font-weight: 600;
+    cursor: pointer;
+    text-decoration: none;
+    transition: background 0.15s, transform 0.1s;
+    -webkit-user-select: none;
+  }
+  .btn:active { transform: scale(0.98); }
+  .btn .size {
+    font-weight: 400;
+    font-size: 12px;
+    opacity: 0.7;
+  }
+
+  .btn-primary {
+    background: var(--accent);
+    color: #fff;
+  }
+  .btn-primary:hover { background: var(--accent-hover); }
+
+  .btn-dat {
+    background: #1e293b;
+    color: var(--text);
+    border: 1px solid #334155;
+  }
+  .btn-dat:hover { background: #334155; }
+
+  .btn-url {
+    background: transparent;
+    color: var(--text);
+    border: 1px solid #334155;
+    font-weight: 400;
+    font-size: 12px;
+    word-break: break-all;
+    text-align: left;
+    padding: 10px 12px;
+    font-family: 'SF Mono', 'Fira Code', monospace;
+    position: relative;
+  }
+  .btn-url::after {
+    content: '📋';
+    position: absolute;
+    right: 10px;
+    top: 50%;
+    transform: translateY(-50%);
+    font-size: 16px;
+  }
+  .btn-url.copied::after { content: '✅'; }
+
+  .step {
+    display: flex;
+    gap: 10px;
+    margin-bottom: 10px;
+    align-items: flex-start;
+  }
+  .step-num {
+    flex-shrink: 0;
+    width: 24px;
+    height: 24px;
+    background: var(--accent);
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 12px;
+    font-weight: 700;
+    color: #fff;
+  }
+  .step-body { font-size: 13px; color: var(--text-dim); }
+  .step-body strong { color: var(--text); }
+
+  .badge {
+    display: inline-block;
+    padding: 2px 8px;
+    border-radius: 4px;
+    font-size: 11px;
+    font-weight: 600;
+  }
+  .badge-green { background: rgba(34,197,94,0.15); color: var(--green); }
+  .badge-orange { background: rgba(245,158,11,0.15); color: var(--orange); }
+  .badge-red { background: rgba(239,68,68,0.15); color: var(--red); }
+
+  .url-grid {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+  }
+  .url-grid summary {
+    font-size: 13px;
+    font-weight: 600;
+    cursor: pointer;
+    color: var(--accent);
+    padding: 4px 0;
+  }
+
+  .tag {
+    display: inline-block;
+    padding: 1px 6px;
+    border-radius: 3px;
+    font-size: 10px;
+    font-weight: 600;
+    margin-right: 4px;
+  }
+  .tag-black { background: rgba(239,68,68,0.15); color: var(--red); }
+  .tag-white { background: rgba(34,197,94,0.15); color: var(--green); }
+  .tag-wl { background: rgba(99,102,241,0.15); color: var(--accent); }
+
+  .footer {
+    text-align: center;
+    font-size: 12px;
+    color: var(--text-dim);
+    margin-top: 24px;
+    padding: 16px 0;
+    border-top: 1px solid rgba(255,255,255,0.06);
+  }
+  .footer a { color: var(--accent); text-decoration: none; }
+
+  .note {
+    background: rgba(245,158,11,0.08);
+    border-left: 3px solid var(--orange);
+    padding: 10px 12px;
+    border-radius: 6px;
+    font-size: 12px;
+    color: var(--text-dim);
+    margin-bottom: 10px;
+  }
+  .note strong { color: var(--text); }
+</style>
+</head>
+<body>
+
+<h1>📱 v2rayNG</h1>
+<p class="subtitle">Настройка для РФ — загрузка конфигов с телефона</p>
+
+<!-- ===== Файлы ===== -->
+<div class="card">
+  <h2>📂 Скачайте файлы</h2>
+  <p style="margin-bottom:10px;">Нажмите на каждый файл — он скачается в память телефона.</p>
+
+  <a class="btn btn-primary" href="https://raw.githubusercontent.com/ZDarow/V_2_R_A_Y_N/main/config/routing-russia.json" download="routing-russia.json">
+    routing-russia.json
+    <span class="size">~2 KB</span>
+  </a>
+
+  <a class="btn btn-dat" href="https://raw.githubusercontent.com/ZDarow/V_2_R_A_Y_N/main/config/config-template-xray.json" download="config-template-xray.json">
+    config-template-xray.json
+    <span class="size">~4 KB</span>
+  </a>
+
+  <a class="btn btn-dat" href="https://raw.githubusercontent.com/ZDarow/V_2_R_A_Y_N/main/config/only_blocked.json" download="only_blocked.json">
+    only_blocked.json
+    <span class="badge badge-green">мобильный</span>
+    <span class="size">~2 KB</span>
+  </a>
+
+  <div style="height:6px;"></div>
+
+  <a class="btn btn-dat" href="https://raw.githubusercontent.com/runetfreedom/russia-v2ray-rules-dat/release/geoip.dat" download="geoip.dat">
+    geoip.dat
+    <span class="badge badge-orange">правила IP</span>
+    <span class="size">~5 MB</span>
+  </a>
+
+  <a class="btn btn-dat" href="https://raw.githubusercontent.com/runetfreedom/russia-v2ray-rules-dat/release/geosite.dat" download="geosite.dat">
+    geosite.dat
+    <span class="badge badge-orange">правила доменов</span>
+    <span class="size">~8 MB</span>
+  </a>
+</div>
+
+<!-- ===== Инструкция ===== -->
+<div class="card">
+  <h2>📋 Инструкция</h2>
+
+  <div class="step">
+    <div class="step-num">1</div>
+    <div class="step-body">
+      <strong>Скачайте файлы выше</strong> — нажмите на каждый, чтобы сохранить в память телефона.
+    </div>
+  </div>
+
+  <div class="step">
+    <div class="step-num">2</div>
+    <div class="step-body">
+      <strong>Перенесите</strong> скачанные файлы в папку<br>
+      <code style="font-size:11px;word-break:break-all;">Android/data/com.v2ray.ang/files/assets/</code><br>
+      (через любой файловый менеджер — Google Files, CX File Explorer и т.п.)
+    </div>
+  </div>
+
+  <div class="step">
+    <div class="step-num">3</div>
+    <div class="step-body">
+      <strong>Откройте v2rayNG</strong> → Настройки → Настройки роутинга →<br>
+      включите «Пользовательский файл роутинга» → выберите
+      <strong>routing-russia.json</strong> (всё через VPN)
+      или <strong>only_blocked.json</strong> (только заблокированное).
+    </div>
+  </div>
+
+  <div class="step">
+    <div class="step-num">4</div>
+    <div class="step-body">
+      <strong>Добавьте подписку</strong> — нажмите <code>+</code> в v2rayNG → «Импорт по URL» → вставьте ссылку из раздела ниже.
+    </div>
+  </div>
+
+  <div class="step">
+    <div class="step-num">5</div>
+    <div class="step-body">
+      <strong>Включите отпечаток сертификата</strong> в настройках подписки (долгое нажатие → карандаш → «Отпечаток сертификата»).
+      <span class="badge badge-red">allowInsecure удалён!</span>
+    </div>
+  </div>
+</div>
+
+<!-- ===== Подписки ===== -->
+<div class="card">
+  <h2>🔗 Подписки</h2>
+  <p style="margin-bottom:10px;">Нажмите на ссылку, чтобы скопировать, затем вставьте в v2rayNG (<code>+</code> → Импорт по URL).</p>
+
+  <details class="url-grid">
+    <summary><span class="tag tag-black">Чёрные списки</span> Весь трафик через VPN</summary>
+    <button class="btn btn-url" onclick="copy(this, 'https://raw.githubusercontent.com/igareck/vpn-configs-for-russia/refs/heads/main/BLACK_VLESS_RUS_mobile.txt')">
+      BLACK_VLESS_RUS_mobile.txt
+    </button>
+    <button class="btn btn-url" onclick="copy(this, 'https://raw.githubusercontent.com/igareck/vpn-configs-for-russia/refs/heads/main/BLACK_VLESS_RUS.txt')">
+      BLACK_VLESS_RUS.txt
+    </button>
+    <button class="btn btn-url" onclick="copy(this, 'https://raw.githubusercontent.com/igareck/vpn-configs-for-russia/refs/heads/main/BLACK_SS+All_RUS.txt')">
+      BLACK_SS+All_RUS.txt
+    </button>
+  </details>
+
+  <details class="url-grid">
+    <summary><span class="tag tag-white">Белые списки</span> Только РФ через VPN</summary>
+    <button class="btn btn-url" onclick="copy(this, 'https://raw.githubusercontent.com/igareck/vpn-configs-for-russia/refs/heads/main/Vless-Reality-White-Lists-Rus-Mobile.txt')">
+      Vless-Reality-White-Lists-Rus-Mobile.txt
+    </button>
+    <button class="btn btn-url" onclick="copy(this, 'https://raw.githubusercontent.com/igareck/vpn-configs-for-russia/refs/heads/main/WHITE-CIDR-RU-all.txt')">
+      WHITE-CIDR-RU-all.txt
+    </button>
+    <button class="btn btn-url" onclick="copy(this, 'https://raw.githubusercontent.com/igareck/vpn-configs-for-russia/refs/heads/main/WHITE-SNI-RU-all.txt')">
+      WHITE-SNI-RU-all.txt
+    </button>
+  </details>
+
+  <details class="url-grid">
+    <summary><span class="tag tag-wl">zieng2/wl</span> Дополнительно</summary>
+    <button class="btn btn-url" onclick="copy(this, 'https://raw.githubusercontent.com/zieng2/wl/main/vless_universal.txt')">
+      vless_universal.txt
+    </button>
+  </details>
+
+  <details class="url-grid">
+    <summary><span class="tag tag-white">hxehex</span> CIDR/IP вайтлист</summary>
+    <button class="btn btn-url" onclick="copy(this, 'https://raw.githubusercontent.com/hxehex/russia-mobile-internet-whitelist/main/cidrwhitelist.txt')">
+      cidrwhitelist.txt
+    </button>
+    <button class="btn btn-url" onclick="copy(this, 'https://raw.githubusercontent.com/hxehex/russia-mobile-internet-whitelist/main/ipwhitelist.txt')">
+      ipwhitelist.txt
+    </button>
+    <button class="btn btn-url" onclick="copy(this, 'https://raw.githubusercontent.com/hxehex/russia-mobile-internet-whitelist/main/whitelist.txt')">
+      whitelist.txt (SNI)
+    </button>
+  </details>
+</div>
+
+<!-- ===== AllowInsecure ===== -->
+<div class="card">
+  <h2>⚠️ allowInsecure</h2>
+  <div class="note">
+    <strong>Xray-core отключает allowInsecure с 1 августа 2026.</strong><br>
+    v2rayNG 2.2.3 полностью удалил эту опцию. Вместо неё — <strong>только отпечаток SHA256</strong> сертификата.
+  </div>
+  <p style="font-size:13px;color:var(--text-dim);">
+    В настройках каждой подписки (долгое нажатие → карандаш) включите
+    «Отпечаток сертификата» (pinnedPeerCertSha256).
+    Если fingerprint не указан — скопируйте из конфига v2rayN или получите через
+    <code style="font-size:11px;">openssl s_client ...</code>
+  </p>
+</div>
+
+<!-- ===== Footer ===== -->
+<div class="footer">
+  <p>
+    <a href="https://github.com/ZDarow/V_2_R_A_Y_N">Репозиторий</a>
+    ·
+    <a href="https://github.com/ZDarow/V_2_R_A_Y_N/issues">Сообщить о проблеме</a>
+  </p>
+  <p style="margin-top:6px;">v2rayN Russia Setup &mdash; MIT License</p>
+</div>
+
+<script>
+function copy(btn, url) {
+  if (navigator.clipboard && navigator.clipboard.writeText) {
+    navigator.clipboard.writeText(url).then(() => {
+      btn.classList.add('copied');
+      setTimeout(() => btn.classList.remove('copied'), 2000);
+    });
+  } else {
+    // fallback for older browsers
+    var textarea = document.createElement('textarea');
+    textarea.value = url;
+    textarea.style.position = 'fixed';
+    textarea.style.opacity = '0';
+    document.body.appendChild(textarea);
+    textarea.select();
+    document.execCommand('copy');
+    document.body.removeChild(textarea);
+    btn.classList.add('copied');
+    setTimeout(() => btn.classList.remove('copied'), 2000);
+  }
+}
+</script>
+
+</body>
+</html>

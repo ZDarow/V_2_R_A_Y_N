@@ -26,6 +26,8 @@ v2rayN-russia-setup/
 │   └── proxy_set_linux_sh.sh         # Установка прокси (GNOME/KDE)
 ├── subscriptions/
 │   └── README.md                    # Список подписок
+├── deploy/
+│   └── index.html                    # Мобильный портал (скачать конфиги с телефона)
 ├── install.sh                       # Автоматический установщик v2rayN (Linux)
 ├── uninstall.sh                     # Деинсталлятор v2rayN
 ├── LICENSE                          # MIT License
@@ -100,6 +102,16 @@ cd V_2_R_A_Y_N
 | **Google Play** | [Play Market](https://play.google.com/store/apps/details?id=com.v2ray.ang) | Требуется Google-сервисы |
 
 **Текущая версия:** `2.2.3` (2 июня 2026), Xray-core v26.6.1, target SDK 37 (Android 17+)
+
+### 📱 Мобильный портал (без терминала)
+
+Откройте на телефоне **одну страницу** и скачайте все файлы нажатиями:
+
+> **👉 [v2rayNG — установка конфигов РФ](https://ZDarow.github.io/V_2_R_A_Y_N/deploy/)**
+>
+> Или используйте зеркало: [cdn.jsdelivr.net](https://cdn.jsdelivr.net/gh/ZDarow/V_2_R_A_Y_N@main/deploy/index.html)
+>
+> На странице: скачивание JSON + geoip/geosite, копирование подписок, инструкция.
 
 ### Настройка для РФ на Android
 

@@ -18,6 +18,15 @@ warn()  { echo -e "${YELLOW}[!]${NC} $1"; }
 error() { echo -e "${RED}[✗]${NC} $1"; exit 1; }
 header(){ echo -e "\n${CYAN}━━━ $1 ━━━${NC}"; }
 
+# ---- trap для очистки временных файлов ----
+CLONE_DIR=""
+cleanup() {
+  if [ -n "$CLONE_DIR" ] && [ -d "$CLONE_DIR" ]; then
+    rm -rf "$CLONE_DIR"
+  fi
+}
+trap cleanup EXIT
+
 # ---- Вспомогательные функции ----
 download_file() {
   local url="$1"
@@ -319,12 +328,7 @@ else
   warn "Не удалось настроить системный прокси (только GNOME/KDE). Настройте вручную: HTTP 127.0.0.1:10809, SOCKS 127.0.0.1:10808"
 fi
 
-# ---- 10. Очистка временных файлов ----
-if [ "$LOCAL_MODE" = false ] && [ -n "${CLONE_DIR:-}" ]; then
-  rm -rf "$CLONE_DIR"
-fi
-
-# ---- 11. Завершение ----
+# ---- 10. Завершение ----
 echo ""
 echo -e "${CYAN}═══════════════════════════════════════════════════════════════${NC}"
 echo -e "${GREEN}  v2rayN успешно установлен и настроен для работы в РФ${NC}"

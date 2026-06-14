@@ -1,4 +1,5 @@
 {
+  "_warning": "Xray-core отключает allowInsecure с 1 августа 2026. Используйте verifyPeerCertByName в настройках подписки v2rayN.",
   "policy": {
     "levels": {
       "0": {

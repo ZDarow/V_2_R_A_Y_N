@@ -30,6 +30,21 @@
     },
     {
       "type": "field",
+      "protocol": ["bittorrent"],
+      "outboundTag": "direct"
+    },
+    {
+      "type": "field",
+      "ip": ["geoip:private"],
+      "outboundTag": "direct"
+    },
+    {
+      "type": "field",
+      "domain": ["geosite:private"],
+      "outboundTag": "direct"
+    },
+    {
+      "type": "field",
       "ip": ["geoip:ru"],
       "outboundTag": "direct"
     },
@@ -37,11 +52,6 @@
       "type": "field",
       "domain": ["domain:ru", "domain:su", "domain:xn--p1ai",
         "geosite:ru-available-only-inside"],
-      "outboundTag": "direct"
-    },
-    {
-      "type": "field",
-      "ip": ["geoip:private"],
       "outboundTag": "direct"
     },
     {

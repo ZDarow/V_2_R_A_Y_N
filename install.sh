@@ -185,6 +185,13 @@ if [ -f "$SCRIPT_DIR/config/config-template-xray.json" ]; then
   cp -f "$SCRIPT_DIR/config/config-template-xray.json" "$V2RAYN_BINCONFIG_DIR/config-template-xray.json"
   info "config-template-xray.json установлен"
 fi
+if [ -f "$SCRIPT_DIR/config/only_blocked.json" ]; then
+  cp -f "$SCRIPT_DIR/config/only_blocked.json" "$V2RAYN_CONFIG_DIR/only_blocked.json"
+  info "only_blocked.json установлен (мобильный режим)"
+fi
+# Предупреждение о allowInsecure
+info "⚠️  ВНИМАНИЕ: Xray отключит параметр allowInsecure с 1 августа 2026."
+info "   Используйте verifyPeerCertByName в настройках подписки v2rayN."
 
 # ---- 7. Скрипты управления ----
 header "Установка скриптов управления"
@@ -238,7 +245,12 @@ https://raw.githubusercontent.com/igareck/vpn-configs-for-russia/refs/heads/main
   ('WL-ZIENG2-001', 'WL Белый список (zieng2)',
    'https://raw.githubusercontent.com/zieng2/wl/main/vless_universal.txt',
    'https://codeberg.org/zieng2/wl/raw/branch/main/vless_universal.txt',
-   1, 3, 60, 'v2ray');
+   1, 3, 60, 'v2ray'),
+  ('WHITELIST-IPS-001', 'Whitelist IP (hxehex) — CIDR для мобильных',
+   'https://raw.githubusercontent.com/hxehex/russia-mobile-internet-whitelist/main/cidrwhitelist.txt',
+   'https://raw.githubusercontent.com/hxehex/russia-mobile-internet-whitelist/main/ipwhitelist.txt
+https://raw.githubusercontent.com/hxehex/russia-mobile-internet-whitelist/main/whitelist.txt',
+   1, 4, 60, 'v2ray');
 SQL
   info "Подписки импортированы в БД v2rayN"
 else

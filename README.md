@@ -16,7 +16,8 @@
 ```
 v2rayN-russia-setup/
 ├── config/
-│   ├── routing-russia.json          # Правила роутинга для РФ
+│   ├── routing-russia.json          # Правила роутинга «Всё через прокси»
+│   ├── only_blocked.json            # Правила «Только заблокированное» (мобильный режим)
 │   └── config-template-xray.json    # Шаблон Xray-core
 ├── scripts/
 │   ├── update-rules.sh              # Обновление geoip/geosite (ветка release)
@@ -66,10 +67,11 @@ cd V_2_R_A_Y_N
 2. Устанавливает зависимости (git, wget, curl, sqlite3, .NET Runtime 10.0+)
 3. Скачивает последнюю версию v2rayN с GitHub и устанавливает
 4. Загружает правила geoip/geosite из **ветки release** `runetfreedom/russia-v2ray-rules-dat`
-5. Устанавливает конфигурацию роутинга `routing-russia.json`
-6. Устанавливает шаблон Xray-core с оптимизациями (включая outbound `proxy` с фрагментацией)
-7. Импортирует подписки в базу v2rayN (SQLite)
+5. Устанавливает конфигурации роутинга: `routing-russia.json` (всё через прокси) + `only_blocked.json` (только заблокированное — для мобильного интернета)
+6. Устанавливает шаблон Xray-core с оптимизациями (outbound `proxy` с фрагментацией, DNS через прокси, Discord VoIP)
+7. Импортирует подписки в базу v2rayN (SQLite), включая whitelist CIDR/IP от hxehex
 8. Настраивает системный прокси (GNOME/KDE)
+9. Выводит предупреждение об отключении allowInsecure с 1 августа 2026
 
 Работает как при локальном запуске, так и через `curl | bash`. Временные файлы автоматически очищаются.
 
@@ -105,8 +107,90 @@ bash <(curl -sSL https://raw.githubusercontent.com/ZDarow/V_2_R_A_Y_N/main/scrip
 |----------|-----|
 | vless_universal | https://raw.githubusercontent.com/zieng2/wl/main/vless_universal.txt |
 
+### Whitelist CIDR/IP для мобильного интернета (hxehex)
+
+| Подписка | URL | Назначение |
+|----------|-----|------------|
+| CIDR Whitelist | https://raw.githubusercontent.com/hxehex/russia-mobile-internet-whitelist/main/cidrwhitelist.txt | CIDR-сети, не заблокированные на мобильных операторах |
+| IP Whitelist | https://raw.githubusercontent.com/hxehex/russia-mobile-internet-whitelist/main/ipwhitelist.txt | Отдельные IP-адреса из белого списка |
+| SNI Whitelist | https://raw.githubusercontent.com/hxehex/russia-mobile-internet-whitelist/main/whitelist.txt | Домены (SNI), доступные при вайтлисте |
+
 > **Примечание:** При блокировке GitHub используйте зеркала: GitLab, Codeberg, Gitea, GitHack.
 > Полный список зеркал: https://github.com/igareck/vpn-configs-for-russia#readme
+>
+> **Дискорд-сообщество по мобильным блокировкам:** https://discord.gg/QPBdMf8dxG
+
+## Режимы маршрутизации
+
+Проект предоставляет два файла роутинга для разных сценариев:
+
+### `routing-russia.json` — Всё через прокси (режим «Чёрный список»)
+Рекомендуется для проводного интернета. Весь TCP/UDP трафик идёт через прокси, кроме:
+- Российских доменов и IP напрямую (`.ru`, `.su`, `.рф`, `geoip:ru`)
+- Приватных сетей (`geoip:private`)
+- Блокировки рекламы (`geosite:category-ads-all`)
+
+### `only_blocked.json` — Только заблокированное (режим «Белый список», для мобильного интернета)
+Рекомендуется для **мобильных операторов** (МТС, Билайн, МегаФон, Tele2, Yota) при вайтлисте:
+- `geoip:ru-blocked` + `geosite:ru-blocked` → proxy
+- **DNS-серверы (1.1.1.1, 8.8.8.8) через прокси** — критично при белых списках
+- **Discord VoIP (UDP 50000-65535) через прокси**
+- BitTorrent → напрямую (чтобы не нагружать прокси)
+- Всё остальное (включая geoip:ru, .ru домены) → напрямую
+
+## Протоколы и защита от DPI
+
+### Рекомендуемый протокол: VLESS + REALITY + XTLS-Vision
+
+```
+REALITY — THE NEXT FUTURE (XTLS, 5.3k ★)
+```
+
+REALITY **полностью устраняет TLS fingerprint сервера**. DPI видит обычное TLS-соединение
+с реальным сайтом (Microsoft, Cloudflare и т.д.). Не требует собственного сертификата или домена.
+
+Базовая конфигурация сервера:
+```json
+{
+  "streamSettings": {
+    "security": "reality",
+    "realitySettings": {
+      "target": "www.microsoft.com:443",
+      "serverNames": ["microsoft.com"],
+      "privateKey": "<xray x25519>",
+      "shortIds": ["0123456789abcdef"]
+    }
+  }
+}
+```
+
+### fragment (анти-DPI) — для протоколов без REALITY
+
+- `packets: tlshello` — фрагментация TLS ClientHello (на outbound **proxy**)
+- `length: 100-200` — размер фрагментов
+- `interval: 10-20` — интервал между фрагментами (ms)
+
+## ⚠️ allowInsecurity будет отключён с 1 августа 2026
+
+**Xray-core отключает параметр `allowInsecure`** с 1 августа 2026.
+Вместо него используйте:
+- **`verifyPeerCertByName`** — проверка сертификата по имени (рекомендуется)
+- **FP (fingerprint) pinning** — привязка к отпечатку сертификата
+
+**v2rayN 7.22.7+** уже поддерживает `verifyPeerCertByName`.
+Убедитесь, что в настройках подписки включена эта опция, а не allowInsecure.
+
+## Two-server схема (для обхода IP-whitelist)
+
+Самый надёжный способ обхода мобильных блокировок (IP + SNI whitelist):
+
+```
+Клиент (РФ, мобильный) → РФ-сервер (белый IP) → Иностранный сервер → Интернет
+```
+
+1. Купите VPS в РФ с IP из `cidrwhitelist.txt` (hxehex)
+2. Настройте на нём Xray как прокси-переходник
+3. Весь трафик идёт через РФ-сервер с «белым» IP → иностранный сервер → цель
 
 ## Оптимизации
 
@@ -121,6 +205,7 @@ bash <(curl -sSL https://raw.githubusercontent.com/ZDarow/V_2_R_A_Y_N/main/scrip
 - DoH через Google DNS (`https://dns.google/dns-query`)
 - DoH через Cloudflare DNS (`https://cloudflare-dns.com/dns-query`)
 - `queryStrategy: UseIP` — получение всех типов записей
+- **DNS через прокси** (IP 1.1.1.1, 8.8.8.8 маршрутизируются через proxy)
 
 ### Sockopt
 
@@ -129,23 +214,14 @@ bash <(curl -sSL https://raw.githubusercontent.com/ZDarow/V_2_R_A_Y_N/main/scrip
 - `domainStrategy: UseIP` — стратегия разрешения доменов
 - `tcpcongestion: bbr` — BBR congestion control
 
-### Fragment (анти-DPI)
-
-- `packets: tlshello` — фрагментация TLS ClientHello (на outbound **proxy**)
-- `length: 100-200` — размер фрагментов
-- `interval: 10-20` — интервал между фрагментами (ms)
-
-### Routing
-
-- Блокировка рекламы (`geosite:category-ads-all`)
-- Маршрутизация заблокированных в РФ ресурсов через прокси (outbound `proxy`)
-- Прямое соединение с .ru/.su/.рф и geoip:ru (outbound `direct`)
-- Fallback на прокси для всего остального
-
 ## Источники
 
 - [runetfreedom/russia-v2ray-rules-dat](https://github.com/runetfreedom/russia-v2ray-rules-dat) — правила geoip/geosite для РФ (ветка release)
+- [runetfreedom/russia-v2ray-custom-routing-list](https://github.com/runetfreedom/russia-v2ray-custom-routing-list) — шаблоны маршрутизации v2rayN
 - [igareck/vpn-configs-for-russia](https://github.com/igareck/vpn-configs-for-russia) — конфиги и списки
 - [zieng2/wl](https://github.com/zieng2/wl) — белые списки
+- [hxehex/russia-mobile-internet-whitelist](https://github.com/hxehex/russia-mobile-internet-whitelist) — whitelist CIDR/IP/SNI для мобильных операторов РФ
+- [XTLS/Xray-core](https://github.com/XTLS/Xray-core) — Xray-core (v26.3.27+)
+- [XTLS/REALITY](https://github.com/XTLS/REALITY) — протокол REALITY (THE NEXT FUTURE)
 - [2dust/v2rayN](https://github.com/2dust/v2rayN) — v2rayN GUI
 - [Xray-core Documentation](https://xtls.github.io/) — документация Xray

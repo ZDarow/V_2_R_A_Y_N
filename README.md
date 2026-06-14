@@ -107,10 +107,9 @@ cd V_2_R_A_Y_N
 
 Откройте на телефоне **одну страницу** и скачайте все файлы нажатиями:
 
-| Ссылка | Статус |
-|--------|--------|
-| [cdn.jsdelivr.net/gh/ZDarow/V_2_R_A_Y_N@main/deploy/index.html](https://cdn.jsdelivr.net/gh/ZDarow/V_2_R_A_Y_N@main/deploy/index.html) | ✅ Работает сразу |
-| `ZDarow.github.io/V_2_R_A_Y_N/deploy/` | ⚠️ Требуется включить GitHub Pages в Settings репозитория |
+> **👉 [ZDarow.github.io/V_2_R_A_Y_N/deploy/](https://ZDarow.github.io/V_2_R_A_Y_N/deploy/)**
+>
+> Зеркало (CDN): [cdn.jsdelivr.net/gh/ZDarow/V_2_R_A_Y_N@main/deploy/index.html](https://cdn.jsdelivr.net/gh/ZDarow/V_2_R_A_Y_N@main/deploy/index.html)
 
 **Что на странице:** скачивание JSON + geoip/geosite одной кнопкой, копирование подписок в буфер, пошаговая инструкция — всё с телефона, без терминала.
 

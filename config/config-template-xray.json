@@ -19,8 +19,14 @@
   },
   "dns": {
     "hosts": {
-      "dns.google": ["8.8.8.8", "8.8.4.4"],
-      "dns.cloudflare.com": ["1.1.1.1", "1.0.0.1"]
+      "dns.google": [
+        "8.8.8.8",
+        "8.8.4.4"
+      ],
+      "dns.cloudflare.com": [
+        "1.1.1.1",
+        "1.0.0.1"
+      ]
     },
     "servers": [
       "https://dns.google/dns-query",
@@ -41,7 +47,10 @@
       },
       "sniffing": {
         "enabled": true,
-        "destOverride": ["http", "tls"]
+        "destOverride": [
+          "http",
+          "tls"
+        ]
       }
     },
     {
@@ -52,7 +61,10 @@
       },
       "sniffing": {
         "enabled": true,
-        "destOverride": ["http", "tls"]
+        "destOverride": [
+          "http",
+          "tls"
+        ]
       }
     }
   ],
@@ -104,22 +116,30 @@
     "rules": [
       {
         "type": "field",
-        "domain": ["geosite:category-ads-all"],
+        "domain": [
+          "geosite:category-ads-all"
+        ],
         "outboundTag": "block"
       },
       {
         "type": "field",
-        "ip": ["geoip:ru-whitelist"],
+        "ip": [
+          "geoip:ru-whitelist"
+        ],
         "outboundTag": "direct"
       },
       {
         "type": "field",
-        "domain": ["geosite:ru-available-only-inside"],
+        "domain": [
+          "geosite:ru-available-only-inside"
+        ],
         "outboundTag": "direct"
       },
       {
         "type": "field",
-        "ip": ["geoip:private"],
+        "ip": [
+          "geoip:private"
+        ],
         "outboundTag": "direct"
       }
     ]

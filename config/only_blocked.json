@@ -4,22 +4,33 @@
   "rules": [
     {
       "type": "field",
-      "domain": ["geosite:ru-blocked"],
+      "domain": [
+        "geosite:ru-blocked"
+      ],
       "outboundTag": "proxy"
     },
     {
       "type": "field",
-      "ip": ["geoip:ru-blocked"],
+      "ip": [
+        "geoip:ru-blocked"
+      ],
       "outboundTag": "proxy"
     },
     {
       "type": "field",
-      "domain": ["geosite:category-ads-all"],
+      "domain": [
+        "geosite:category-ads-all"
+      ],
       "outboundTag": "block"
     },
     {
       "type": "field",
-      "ip": ["1.0.0.1", "1.1.1.1", "8.8.8.8", "8.8.4.4"],
+      "ip": [
+        "1.0.0.1",
+        "1.1.1.1",
+        "8.8.8.8",
+        "8.8.4.4"
+      ],
       "outboundTag": "proxy"
     },
     {
@@ -30,33 +41,47 @@
     },
     {
       "type": "field",
-      "protocol": ["bittorrent"],
+      "protocol": [
+        "bittorrent"
+      ],
       "outboundTag": "direct"
     },
     {
       "type": "field",
-      "ip": ["geoip:ru-whitelist"],
+      "ip": [
+        "geoip:ru-whitelist"
+      ],
       "outboundTag": "direct"
     },
     {
       "type": "field",
-      "ip": ["geoip:private"],
+      "ip": [
+        "geoip:private"
+      ],
       "outboundTag": "direct"
     },
     {
       "type": "field",
-      "domain": ["geosite:private"],
+      "domain": [
+        "geosite:private"
+      ],
       "outboundTag": "direct"
     },
     {
       "type": "field",
-      "ip": ["geoip:ru"],
+      "ip": [
+        "geoip:ru"
+      ],
       "outboundTag": "direct"
     },
     {
       "type": "field",
-      "domain": ["domain:ru", "domain:su", "domain:xn--p1ai",
-        "geosite:ru-available-only-inside"],
+      "domain": [
+        "domain:ru",
+        "domain:su",
+        "domain:xn--p1ai",
+        "geosite:ru-available-only-inside"
+      ],
       "outboundTag": "direct"
     },
     {

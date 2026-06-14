@@ -1,0 +1,28 @@
+# Git Attributes — нормализация строк и diff-настройки
+# https://git-scm.com/docs/gitattributes
+
+# Нормализация окончаний строк (CRLF → LF при коммите)
+* text=auto eol=lf
+
+# Shell-скрипты
+*.sh text eol=lf diff=bash
+*.bash text eol=lf diff=bash
+
+# JSON
+*.json text eol=lf diff=json
+
+# Markdown
+*.md text eol=lf diff=markdown
+
+# YAML/CI
+*.yml text eol=lf
+*.yaml text eol=lf
+
+# Бинарники — не трогать
+*.dat binary
+*.deb binary
+*.apk binary
+*.zip binary
+
+# Лицензия
+LICENSE text eol=lf

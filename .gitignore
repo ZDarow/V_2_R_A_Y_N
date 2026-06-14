@@ -1,24 +1,45 @@
-# System
+# === Системные ===
 .DS_Store
 Thumbs.db
 Desktop.ini
 *~
 *.swp
+*.swo
 *.bak
+*.orig
 
-# IDE
+# === IDE ===
 .vscode/
 .idea/
 *.sublime-*
+.project
+.classpath
+.settings/
 
-# v2rayN runtime (создаётся при запуске)
+# === OS ===
+ehthumbs.db
+Icon?
+._*
+.AppleDouble
+.LSOverride
+Spotlight-V100
+.Trashes
+
+# === v2rayN runtime (создаётся при запуске) ===
 guiNDB.db
 *.db-journal
 *.db-wal
+*.db-shm
 
-# Временные файлы
+# === Временные файлы ===
 /tmp/
+*.tmp
+*.log
 
-# Правила (загружаются отдельно)
+# === Правила (загружаются отдельно) ===
 rules/geoip.dat
 rules/geosite.dat
+
+# === Деплой ===
+v2rayNG-mobile-config-*.zip
+deploy-mobile-*/

@@ -8,17 +8,6 @@ PROXY_SCRIPT="${BASH_SOURCE[0]%/*}/proxy_set_linux_sh.sh"
 
 IGNORE_HOSTS="localhost,127.0.0.0/8,::1,*.local,.local,.ru,.su,.xn--p1ai"
 
-detect_de() {
-  if [ -n "${XDG_CURRENT_DESKTOP:-}" ] || [ -n "${XDG_SESSION_DESKTOP:-}" ]; then
-    return 0
-  fi
-  # fallback: check if gsettings is available
-  command -v gsettings &>/dev/null && return 0
-  command -v kwriteconfig6 &>/dev/null && return 0
-  command -v kwriteconfig5 &>/dev/null && return 0
-  return 1
-}
-
 case "${1:-status}" in
   on|enable|manual)
     if [ -f "$PROXY_SCRIPT" ]; then

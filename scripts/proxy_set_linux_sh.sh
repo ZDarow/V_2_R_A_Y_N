@@ -8,8 +8,10 @@ trim() {
 
 build_gsettings_array() {
     [[ -z "$1" ]] && echo "[]" && return
-    local host joined hosts=()
-    IFS=',' read -ra parts <<< "$1"
+    local host joined hosts=() saved_ifs="$IFS"
+    IFS=','
+    read -ra parts <<< "$1"
+    IFS="$saved_ifs"
     for host in "${parts[@]}"; do
         trim host
         [[ -n "$host" ]] && hosts+=("$host")

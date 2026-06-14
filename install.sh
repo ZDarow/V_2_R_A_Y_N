@@ -10,7 +10,6 @@ set -euo pipefail
 
 REPO_URL="${REPO_URL:-https://github.com/ZDarow/V_2_R_A_Y_N.git}"
 RULES_RELEASE_URL="https://raw.githubusercontent.com/runetfreedom/russia-v2ray-rules-dat/release"
-DOTNET_VERSION="10.0"
 
 # ---- Цвета и утилиты ----
 RED='\033[0;31m'; GREEN='\033[0;32m'; YELLOW='\033[1;33m'; CYAN='\033[0;36m'; NC='\033[0m'
@@ -19,15 +18,44 @@ warn()  { echo -e "${YELLOW}[!]${NC} $1"; }
 error() { echo -e "${RED}[✗]${NC} $1"; exit 1; }
 header(){ echo -e "\n${CYAN}━━━ $1 ━━━${NC}"; }
 
+# ---- Вспомогательные функции ----
+download_file() {
+  local url="$1"
+  local dest="$2"
+  local tmp_dest="${dest}.tmp"
+  if command -v curl &>/dev/null; then
+    curl -sSL --connect-timeout 15 -o "$tmp_dest" "$url" && mv "$tmp_dest" "$dest" && return 0
+  fi
+  if command -v wget &>/dev/null; then
+    wget -q --timeout=15 -O "$tmp_dest" "$url" && mv "$tmp_dest" "$dest" && return 0
+  fi
+  return 1
+}
+
 # ---- Парсинг аргументов ----
 FORCE_REINSTALL=false
 SKIP_V2RAYN=false
+show_help() {
+  echo "v2rayN Russia Setup — полностью автоматизированный установщик"
+  echo ""
+  echo "Использование:"
+  echo "  bash <(curl -sSL https://raw.githubusercontent.com/ZDarow/V_2_R_A_Y_N/main/install.sh)"
+  echo "  $0 [--help] [--force-reinstall] [--skip-v2rayn] [--repo-url <url>]"
+  echo ""
+  echo "Флаги:"
+  echo "  --help              Показать эту справку"
+  echo "  --force-reinstall   Переустановить v2rayN, даже если уже установлен"
+  echo "  --skip-v2rayn       Не устанавливать v2rayN (только конфиги и подписки)"
+  echo "  --repo-url <url>    URL репозитория (по умолчанию: ZDarow/V_2_R_A_Y_N)"
+  exit 0
+}
 while [[ $# -gt 0 ]]; do
   case "$1" in
+    --help) show_help ;;
     --force-reinstall) FORCE_REINSTALL=true; shift ;;
     --skip-v2rayn) SKIP_V2RAYN=true; shift ;;
     --repo-url) REPO_URL="$2"; shift 2 ;;
-    *) shift ;;
+    *) warn "Неизвестный флаг: $1 (используйте --help для списка)"; shift ;;
   esac
 done
 
@@ -64,15 +92,22 @@ fi
 
 # ---- 1. Установка зависимостей ----
 header "Установка системных зависимостей"
-if command -v apt-get &>/dev/null; then
-  sudo apt-get update -qq 2>/dev/null || true
-  sudo DEBIAN_FRONTEND=noninteractive apt-get install -y -qq git wget curl sqlite3 ca-certificates 2>/dev/null || warn "Некоторые зависимости не установлены"
-elif command -v dnf &>/dev/null; then
-  sudo dnf install -y -q git wget curl sqlite ca-certificates 2>/dev/null || warn "Некоторые зависимости не установлены"
-elif command -v pacman &>/dev/null; then
-  sudo pacman -S --noconfirm --needed git wget curl sqlite ca-certificates 2>/dev/null || warn "Некоторые зависимости не установлены"
+install_deps() {
+  if command -v apt-get &>/dev/null; then
+    sudo apt-get update -qq 2>/dev/null || true
+    sudo DEBIAN_FRONTEND=noninteractive apt-get install -y -qq git wget curl sqlite3 ca-certificates
+  elif command -v dnf &>/dev/null; then
+    sudo dnf install -y -q git wget curl sqlite ca-certificates
+  elif command -v pacman &>/dev/null; then
+    sudo pacman -S --noconfirm --needed git wget curl sqlite ca-certificates
+  else
+    return 1
+  fi
+}
+if install_deps; then
+  info "Зависимости установлены"
 else
-  warn "Не удалось определить пакетный менеджер. Установите git, wget, curl, sqlite3 вручную."
+  warn "Не удалось установить зависимости через пакетный менеджер. Установите git, wget, curl, sqlite3 вручную."
 fi
 
 # ---- 2. Установка .NET Runtime (если не установлен) ----
@@ -81,7 +116,7 @@ DOTNET_INSTALLED=false
 if command -v dotnet &>/dev/null; then
   DOTNET_VER=$(dotnet --version 2>/dev/null | cut -d. -f1)
   info ".NET Runtime найден: $(dotnet --version 2>/dev/null)"
-  if [ "$DOTNET_VER" -ge 10 ] 2>/dev/null; then
+  if [ -n "$DOTNET_VER" ] && [ "$DOTNET_VER" -ge 10 ] 2>/dev/null; then
     DOTNET_INSTALLED=true
   else
     warn "Требуется .NET 10.0+, установлена версия $(dotnet --version 2>/dev/null). Попытка обновления..."
@@ -116,14 +151,21 @@ if [ "$SKIP_V2RAYN" = false ]; then
       LATEST="https://github.com/2dust/v2rayN/releases/latest/download/v2rayN-linux-${DEB_ARCH}.deb"
       warn "GitHub API недоступен. Использую прямой URL (может быть неактуальным)."
     fi
+    V2RAYN_DEB="/tmp/v2rayN-$$.deb"
     info "Загрузка v2rayN: $LATEST"
-    wget -q --show-progress -O /tmp/v2rayN.deb "$LATEST" 2>/dev/null || curl -sSL -o /tmp/v2rayN.deb "$LATEST"
-    if [ ! -f /tmp/v2rayN.deb ] || [ ! -s /tmp/v2rayN.deb ]; then
+    if command -v wget &>/dev/null; then
+      wget -q --show-progress -O "$V2RAYN_DEB" "$LATEST" 2>/dev/null || \
+        curl -sSL -o "$V2RAYN_DEB" "$LATEST"
+    else
+      curl -sSL -o "$V2RAYN_DEB" "$LATEST"
+    fi
+    if [ ! -f "$V2RAYN_DEB" ] || [ ! -s "$V2RAYN_DEB" ]; then
+      rm -f "$V2RAYN_DEB"
       error "Не удалось загрузить v2rayN. Проверьте соединение."
     fi
-    sudo dpkg -i /tmp/v2rayN.deb 2>/dev/null || true
+    sudo dpkg -i "$V2RAYN_DEB" 2>/dev/null || true
     sudo apt-get install -f -y -qq 2>/dev/null || true
-    rm -f /tmp/v2rayN.deb
+    rm -f "$V2RAYN_DEB"
     # Проверка v2rayN: сначала PATH, потом /opt/v2rayN/
     if command -v v2rayn &>/dev/null; then
       info "v2rayN установлен: $(v2rayn --version 2>/dev/null || true)"
@@ -147,18 +189,6 @@ mkdir -p "$V2RAYN_CONFIG_DIR" "$V2RAYN_BIN_DIR" "$V2RAYN_BINCONFIG_DIR" "$V2RAYN
 
 # ---- 5. Правила роутинга (geoip/geosite) ----
 header "Установка правил geoip/geosite"
-download_rule() {
-  local url="$1"
-  local dest="$2"
-  local name="$3"
-  if command -v curl &>/dev/null; then
-    curl -sSL --connect-timeout 15 -o "$dest" "$url" && return 0
-  fi
-  if command -v wget &>/dev/null; then
-    wget -q --timeout=15 -O "$dest" "$url" && return 0
-  fi
-  return 1
-}
 RULES_SRC="$SCRIPT_DIR/rules"
 if [ -f "$RULES_SRC/geoip.dat" ] && [ -f "$RULES_SRC/geosite.dat" ]; then
   cp -f "$RULES_SRC/geoip.dat" "$V2RAYN_BIN_DIR/geoip.dat"
@@ -166,9 +196,9 @@ if [ -f "$RULES_SRC/geoip.dat" ] && [ -f "$RULES_SRC/geosite.dat" ]; then
   info "Правила geoip/geosite установлены из репозитория"
 else
   info "Загрузка правил из runetfreedom (ветка release)..."
-  download_rule "$RULES_RELEASE_URL/geoip.dat" "$V2RAYN_BIN_DIR/geoip.dat" "geoip.dat" || \
+  download_file "$RULES_RELEASE_URL/geoip.dat" "$V2RAYN_BIN_DIR/geoip.dat" || \
     warn "Не удалось загрузить geoip.dat"
-  download_rule "$RULES_RELEASE_URL/geosite.dat" "$V2RAYN_BIN_DIR/geosite.dat" "geosite.dat" || \
+  download_file "$RULES_RELEASE_URL/geosite.dat" "$V2RAYN_BIN_DIR/geosite.dat" || \
     warn "Не удалось загрузить geosite.dat"
   if [ -f "$V2RAYN_BIN_DIR/geoip.dat" ] && [ -s "$V2RAYN_BIN_DIR/geoip.dat" ]; then
     info "Правила geoip/geosite установлены (ветка release)"

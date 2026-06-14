@@ -46,6 +46,11 @@
     },
     {
       "type": "field",
+      "domain": ["geosite:private"],
+      "outboundTag": "direct"
+    },
+    {
+      "type": "field",
       "network": "tcp,udp",
       "outboundTag": "proxy"
     }

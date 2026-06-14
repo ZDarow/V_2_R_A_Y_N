@@ -19,7 +19,6 @@ fi
 download_file() {
   local url="$1"
   local dest="$2"
-  local name="$3"
   local tmp_dest="${dest}.tmp"
 
   if command -v curl &>/dev/null; then
@@ -31,45 +30,62 @@ download_file() {
   return 1
 }
 
-# Бэкап текущих правил
-BACKUP_DIR="$V2RAYN_BIN_DIR/backup-rules-$(date +%Y%m%d-%H%M%S)"
-mkdir -p "$BACKUP_DIR"
-cp -f "$V2RAYN_BIN_DIR/geoip.dat" "$BACKUP_DIR/" 2>/dev/null || true
-cp -f "$V2RAYN_BIN_DIR/geosite.dat" "$BACKUP_DIR/" 2>/dev/null || true
-echo "   Бэкап:        $BACKUP_DIR"
+# Проверка целостности .dat файла
+validate_dat() {
+  local f="$1"
+  [ -f "$f" ] && [ -s "$f" ] && return 0
+  return 1
+}
 
-# Загрузка новых правил
+# Каталог для загрузки
+TMP_RULES=$(mktemp -d)
+CLEANUP_TMP=true
+
+# Загрузка geoip.dat
 echo "Загрузка geoip.dat..."
-if download_file "$RULES_RELEASE_URL/geoip.dat" "$V2RAYN_BIN_DIR/geoip.dat" "geoip.dat"; then
-  echo "   geoip.dat:    $(ls -lh "$V2RAYN_BIN_DIR/geoip.dat" | awk '{print $5}')"
+if download_file "$RULES_RELEASE_URL/geoip.dat" "$TMP_RULES/geoip.dat"; then
+  echo "   geoip.dat:    $(ls -lh "$TMP_RULES/geoip.dat" | awk '{print $5}')"
 else
   echo "ОШИБКА: не удалось загрузить geoip.dat"
-  # Восстанавливаем из бэкапа
-  cp -f "$BACKUP_DIR/geoip.dat" "$V2RAYN_BIN_DIR/geoip.dat" 2>/dev/null || true
+  CLEANUP_TMP=false
 fi
 
+# Загрузка geosite.dat
 echo "Загрузка geosite.dat..."
-if download_file "$RULES_RELEASE_URL/geosite.dat" "$V2RAYN_BIN_DIR/geosite.dat" "geosite.dat"; then
-  echo "   geosite.dat:  $(ls -lh "$V2RAYN_BIN_DIR/geosite.dat" | awk '{print $5}')"
+if download_file "$RULES_RELEASE_URL/geosite.dat" "$TMP_RULES/geosite.dat"; then
+  echo "   geosite.dat:  $(ls -lh "$TMP_RULES/geosite.dat" | awk '{print $5}')"
 else
   echo "ОШИБКА: не удалось загрузить geosite.dat"
-  cp -f "$BACKUP_DIR/geosite.dat" "$V2RAYN_BIN_DIR/geosite.dat" 2>/dev/null || true
+  CLEANUP_TMP=false
 fi
 
-# Валидация: проверяем, что файлы не пустые
+# Валидация загруженных файлов
 VALID=true
 for f in geoip.dat geosite.dat; do
-  if [ ! -f "$V2RAYN_BIN_DIR/$f" ] || [ ! -s "$V2RAYN_BIN_DIR/$f" ]; then
+  if ! validate_dat "$TMP_RULES/$f"; then
     echo "ОШИБКА: $f повреждён или пуст"
     VALID=false
   fi
 done
 
 if [ "$VALID" = true ]; then
+  # Бэкап старых правил (только если новые валидны)
+  BACKUP_DIR="$V2RAYN_BIN_DIR/backup-rules-$(date +%Y%m%d-%H%M%S)"
+  mkdir -p "$BACKUP_DIR"
+  cp -f "$V2RAYN_BIN_DIR/geoip.dat" "$BACKUP_DIR/" 2>/dev/null || true
+  cp -f "$V2RAYN_BIN_DIR/geosite.dat" "$BACKUP_DIR/" 2>/dev/null || true
+  echo "   Бэкап:        $BACKUP_DIR"
+
+  # Установка новых правил
+  cp -f "$TMP_RULES/geoip.dat" "$V2RAYN_BIN_DIR/geoip.dat"
+  cp -f "$TMP_RULES/geosite.dat" "$V2RAYN_BIN_DIR/geosite.dat"
   echo "✅ Правила обновлены."
 else
-  echo "⚠️ Некоторые правила не обновились. Используется бэкап."
+  echo "⚠️ Ошибка загрузки. Текущие правила сохранены без изменений."
 fi
+
+# Очистка
+rm -rf "$TMP_RULES"
 
 echo ""
 echo "Перезапустите v2rayN для применения изменений."

@@ -1,5 +1,5 @@
 {
-  "_warning": "Xray-core отключает allowInsecure с 1 августа 2026. Используйте verifyPeerCertByName в настройках подписки v2rayN.",
+  "_warning": "⚠️ Xray-core ОТКЛЮЧАЕТ allowInsecure 1 августа 2026 (осталось 45 дней). Замените на verifyPeerCertByName или pinnedPeerCertSha256 в настройках подписки v2rayN.",
   "policy": {
     "levels": {
       "0": {
@@ -106,6 +106,16 @@
         "type": "field",
         "domain": ["geosite:category-ads-all"],
         "outboundTag": "block"
+      },
+      {
+        "type": "field",
+        "ip": ["geoip:ru-whitelist"],
+        "outboundTag": "direct"
+      },
+      {
+        "type": "field",
+        "domain": ["geosite:ru-available-only-inside"],
+        "outboundTag": "direct"
       },
       {
         "type": "field",

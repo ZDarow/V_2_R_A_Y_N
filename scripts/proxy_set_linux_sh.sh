@@ -1,4 +1,5 @@
 #!/bin/bash
+set -euo pipefail
 
 trim() {
     local -n ref=$1
@@ -30,7 +31,7 @@ set_gnome_proxy() {
     gsettings set org.gnome.system.proxy mode "$MODE"
 
     if [ "$MODE" == "manual" ]; then
-        local PROTOCOLS=("http" "https" "ftp" "socks")
+        local PROTOCOLS=("http" "https" "socks")
 
         for PROTOCOL in "${PROTOCOLS[@]}"; do
             gsettings set org.gnome.system.proxy.$PROTOCOL host "$PROXY_IP"
@@ -67,7 +68,6 @@ set_kde_proxy() {
         $KWRITECONFIG --file kioslaverc --group "Proxy Settings" --key ProxyType 1
         $KWRITECONFIG --file kioslaverc --group "Proxy Settings" --key httpProxy "http://$PROXY_IP:$PROXY_PORT"
         $KWRITECONFIG --file kioslaverc --group "Proxy Settings" --key httpsProxy "http://$PROXY_IP:$PROXY_PORT"
-        $KWRITECONFIG --file kioslaverc --group "Proxy Settings" --key ftpProxy "http://$PROXY_IP:$PROXY_PORT"
         $KWRITECONFIG --file kioslaverc --group "Proxy Settings" --key socksProxy "http://$PROXY_IP:$PROXY_PORT"
 
         $KWRITECONFIG --file kioslaverc --group "Proxy Settings" --key NoProxyFor "$IGNORE_HOSTS"

@@ -71,7 +71,7 @@ OS_ID=$(grep -oP '^ID=\K.*' /etc/os-release 2>/dev/null || echo "unknown")
 info "Система: $OS_ID, архитектура: $ARCH"
 
 # ---- Root-проверка ----
-if [ "$EUID" -eq 0 ]; then
+if [ "$(id -u)" -eq 0 ]; then
   error "Не запускайте скрипт от root. Используйте обычного пользователя (sudo будет запрошен по мере необходимости)."
 fi
 
@@ -94,7 +94,7 @@ fi
 header "Установка системных зависимостей"
 install_deps() {
   if command -v apt-get &>/dev/null; then
-    sudo apt-get update -qq 2>/dev/null || true
+    sudo apt-get update -qq || true
     sudo DEBIAN_FRONTEND=noninteractive apt-get install -y -qq git wget curl sqlite3 ca-certificates
   elif command -v dnf &>/dev/null; then
     sudo dnf install -y -q git wget curl sqlite ca-certificates
@@ -124,12 +124,12 @@ if command -v dotnet &>/dev/null; then
 fi
 if [ "$DOTNET_INSTALLED" = false ]; then
   if command -v apt-get &>/dev/null; then
-    info "Установка dotnet-runtime-10.0..."
-    sudo apt-get install -y -qq dotnet-runtime-10.0 2>/dev/null || {
-      warn "Пакет dotnet-runtime-10.0 недоступен в текущем репозитории. Пробуем dotnet-runtime-8.0..."
-      sudo apt-get install -y -qq dotnet-runtime-8.0 2>/dev/null || \
-      warn "Не удалось установить .NET через apt. Установите вручную: https://dotnet.microsoft.com/download"
-    }
+    info "Установка dotnet-runtime-10.0 (требуется для v2rayN 7.22+)..."
+    if sudo apt-get install -y -qq dotnet-runtime-10.0; then
+      info ".NET 10.0 успешно установлен"
+    else
+      warn "Пакет dotnet-runtime-10.0 недоступен. Установите вручную: https://dotnet.microsoft.com/download"
+    fi
   else
     warn "Установите .NET Runtime 10.0+ вручную: https://dotnet.microsoft.com/download"
   fi
@@ -153,6 +153,7 @@ if [ "$SKIP_V2RAYN" = false ]; then
     fi
     V2RAYN_DEB="/tmp/v2rayN-$$.deb"
     info "Загрузка v2rayN: $LATEST"
+    # Для Android используйте v2rayNG: https://github.com/2dust/v2rayNG/releases
     if command -v wget &>/dev/null; then
       wget -q --show-progress -O "$V2RAYN_DEB" "$LATEST" 2>/dev/null || \
         curl -sSL -o "$V2RAYN_DEB" "$LATEST"
@@ -163,19 +164,23 @@ if [ "$SKIP_V2RAYN" = false ]; then
       rm -f "$V2RAYN_DEB"
       error "Не удалось загрузить v2rayN. Проверьте соединение."
     fi
-    sudo dpkg -i "$V2RAYN_DEB" 2>/dev/null || true
-    sudo apt-get install -f -y -qq 2>/dev/null || true
+    if sudo dpkg -i "$V2RAYN_DEB"; then
+      info "v2rayN: пакет установлен"
+    else
+      warn "dpkg: ошибка зависимостей. Исправление через apt-get install -f..."
+      sudo apt-get install -f -y -qq || warn "apt-get install -f не удался"
+    fi
     rm -f "$V2RAYN_DEB"
     # Проверка v2rayN: сначала PATH, потом /opt/v2rayN/
     if command -v v2rayn &>/dev/null; then
-      info "v2rayN установлен: $(v2rayn --version 2>/dev/null || true)"
-    elif [ -f /opt/v2rayN/v2rayn ]; then
+      info "v2rayN установлен: $(v2rayn --version 2>/dev/null || echo 'версия неизвестна')"
+    elif [ -x /opt/v2rayN/v2rayn ]; then
       info "v2rayN установлен в /opt/v2rayN/"
       # Добавляем в PATH для текущего пользователя
       mkdir -p "$HOME/.local/bin"
-      ln -sf /opt/v2rayN/v2rayn "$HOME/.local/bin/v2rayn" 2>/dev/null || true
+      ln -sf /opt/v2rayN/v2rayn "$HOME/.local/bin/v2rayn"
     else
-      warn "v2rayN установлен, но бинарник не найден. Проверьте /opt/v2rayN/"
+      warn "v2rayN: бинарник не найден. Проверьте /opt/v2rayN/ или установите вручную."
     fi
   fi
 fi
@@ -189,20 +194,21 @@ mkdir -p "$V2RAYN_CONFIG_DIR" "$V2RAYN_BIN_DIR" "$V2RAYN_BINCONFIG_DIR" "$V2RAYN
 
 # ---- 5. Правила роутинга (geoip/geosite) ----
 header "Установка правил geoip/geosite"
-RULES_SRC="$SCRIPT_DIR/rules"
-if [ -f "$RULES_SRC/geoip.dat" ] && [ -f "$RULES_SRC/geosite.dat" ]; then
-  cp -f "$RULES_SRC/geoip.dat" "$V2RAYN_BIN_DIR/geoip.dat"
-  cp -f "$RULES_SRC/geosite.dat" "$V2RAYN_BIN_DIR/geosite.dat"
-  info "Правила geoip/geosite установлены из репозитория"
-else
-  info "Загрузка правил из runetfreedom (ветка release)..."
-  download_file "$RULES_RELEASE_URL/geoip.dat" "$V2RAYN_BIN_DIR/geoip.dat" || \
-    warn "Не удалось загрузить geoip.dat"
-  download_file "$RULES_RELEASE_URL/geosite.dat" "$V2RAYN_BIN_DIR/geosite.dat" || \
-    warn "Не удалось загрузить geosite.dat"
-  if [ -f "$V2RAYN_BIN_DIR/geoip.dat" ] && [ -s "$V2RAYN_BIN_DIR/geoip.dat" ]; then
-    info "Правила geoip/geosite установлены (ветка release)"
-  fi
+
+validate_dat() {
+  local f="$1"
+  [ -f "$f" ] && [ -s "$f" ]
+}
+
+info "Загрузка правил из runetfreedom (ветка release)..."
+download_file "$RULES_RELEASE_URL/geoip.dat" "$V2RAYN_BIN_DIR/geoip.dat" && \
+  validate_dat "$V2RAYN_BIN_DIR/geoip.dat" || \
+  { rm -f "$V2RAYN_BIN_DIR/geoip.dat"; warn "Не удалось загрузить geoip.dat"; }
+download_file "$RULES_RELEASE_URL/geosite.dat" "$V2RAYN_BIN_DIR/geosite.dat" && \
+  validate_dat "$V2RAYN_BIN_DIR/geosite.dat" || \
+  { rm -f "$V2RAYN_BIN_DIR/geosite.dat"; warn "Не удалось загрузить geosite.dat"; }
+if validate_dat "$V2RAYN_BIN_DIR/geoip.dat" && validate_dat "$V2RAYN_BIN_DIR/geosite.dat"; then
+  info "Правила geoip/geosite установлены (ветка release)"
 fi
 
 # ---- 6. Конфигурация роутинга и Xray ----
@@ -289,7 +295,7 @@ fi
 
 # ---- 9. Настройка системного прокси ----
 header "Настройка системного прокси"
-if command -v gsettings &>/dev/null; then
+if command -v gsettings &>/dev/null && gsettings list-schemas 2>/dev/null | grep -q 'org.gnome.system.proxy'; then
   gsettings set org.gnome.system.proxy mode 'manual' 2>/dev/null || true
   gsettings set org.gnome.system.proxy.http host '127.0.0.1' 2>/dev/null || true
   gsettings set org.gnome.system.proxy.http port 10809 2>/dev/null || true
@@ -332,5 +338,5 @@ echo -e "  ${YELLOW}Включить/выключить прокси:${NC}"
 echo -e "    ~/.config/v2rayN/proxy-toggle.sh {on|off|status}"
 echo ""
 echo -e "  ${YELLOW}Обновить подписки:${NC}  v2rayn → Подписки → Обновить все"
-echo -e "  ${YELLOW}Обновить правила:${NC}    ${SCRIPT_DIR}/scripts/update-rules.sh  (или из репозитория)"
+echo -e "  ${YELLOW}Обновить правила:${NC}    bash <(curl -sSL https://raw.githubusercontent.com/ZDarow/V_2_R_A_Y_N/main/scripts/update-rules.sh)"
 echo ""

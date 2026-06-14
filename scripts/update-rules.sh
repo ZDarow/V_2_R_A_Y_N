@@ -30,40 +30,59 @@ download_file() {
   return 1
 }
 
-# Проверка целостности .dat файла
-validate_dat() {
-  local f="$1"
-  [ -f "$f" ] && [ -s "$f" ] && return 0
-  return 1
-}
-
 # Каталог для загрузки
 TMP_RULES=$(mktemp -d)
-CLEANUP_TMP=true
+trap 'rm -rf "$TMP_RULES"' EXIT
+
+# SHA256 верификация
+verify_sha256() {
+  local dat_file="$1"
+  local sha_url="$2"
+  local sha_file="${dat_file}.sha256"
+  if download_file "$sha_url" "$sha_file"; then
+    local expected
+    expected=$(cut -d' ' -f1 < "$sha_file" 2>/dev/null || echo "")
+    if [ -n "$expected" ]; then
+      local actual
+      actual=$(sha256sum "$dat_file" 2>/dev/null | cut -d' ' -f1 || echo "")
+      rm -f "$sha_file"
+      if [ "$expected" = "$actual" ]; then
+        return 0
+      fi
+      echo "⚠️  SHA256 не совпадает (ожидается: $expected, получено: $actual)"
+      return 1
+    fi
+  fi
+  echo "⚠️  Нет SHA256 checksum для проверки (пропускаем)"
+  return 0
+}
 
 # Загрузка geoip.dat
 echo "Загрузка geoip.dat..."
-if download_file "$RULES_RELEASE_URL/geoip.dat" "$TMP_RULES/geoip.dat"; then
+if download_file "$RULES_RELEASE_URL/geoip.dat" "$TMP_RULES/geoip.dat" && verify_sha256 "$TMP_RULES/geoip.dat" "$RULES_RELEASE_URL/geoip.dat.sha256"; then
   echo "   geoip.dat:    $(ls -lh "$TMP_RULES/geoip.dat" | awk '{print $5}')"
 else
+  rm -f "$TMP_RULES/geoip.dat"
   echo "ОШИБКА: не удалось загрузить geoip.dat"
-  CLEANUP_TMP=false
 fi
 
 # Загрузка geosite.dat
 echo "Загрузка geosite.dat..."
-if download_file "$RULES_RELEASE_URL/geosite.dat" "$TMP_RULES/geosite.dat"; then
+if download_file "$RULES_RELEASE_URL/geosite.dat" "$TMP_RULES/geosite.dat" && verify_sha256 "$TMP_RULES/geosite.dat" "$RULES_RELEASE_URL/geosite.dat.sha256"; then
   echo "   geosite.dat:  $(ls -lh "$TMP_RULES/geosite.dat" | awk '{print $5}')"
 else
+  rm -f "$TMP_RULES/geosite.dat"
   echo "ОШИБКА: не удалось загрузить geosite.dat"
-  CLEANUP_TMP=false
 fi
 
 # Валидация загруженных файлов
 VALID=true
 for f in geoip.dat geosite.dat; do
-  if ! validate_dat "$TMP_RULES/$f"; then
-    echo "ОШИБКА: $f повреждён или пуст"
+  if [ ! -f "$TMP_RULES/$f" ]; then
+    echo "⚠️  $f: пропущен (не загружен)"
+    VALID=false
+  elif [ ! -s "$TMP_RULES/$f" ]; then
+    echo "ОШИБКА: $f пуст"
     VALID=false
   fi
 done
@@ -83,9 +102,6 @@ if [ "$VALID" = true ]; then
 else
   echo "⚠️ Ошибка загрузки. Текущие правила сохранены без изменений."
 fi
-
-# Очистка
-rm -rf "$TMP_RULES"
 
 echo ""
 echo "Перезапустите v2rayN для применения изменений."

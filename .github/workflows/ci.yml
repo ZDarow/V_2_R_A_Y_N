@@ -14,15 +14,33 @@ jobs:
     steps:
       - uses: actions/checkout@v4
       - name: Run ShellCheck
-        uses: ludeeus/action-shellcheck@master
+        uses: ludeeus/action-shellcheck@2.0.0
         with:
           severity: warning
           scandir: ./
           additional_files: >
             install.sh
+            uninstall.sh
             scripts/update-rules.sh
             scripts/proxy-toggle.sh
             scripts/proxy_set_linux_sh.sh
+            scripts/deploy-mobile.sh
+
+  bash-syntax:
+    name: Bash Syntax
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Check bash syntax
+        run: |
+          errors=0
+          for f in install.sh uninstall.sh scripts/update-rules.sh scripts/proxy-toggle.sh scripts/proxy_set_linux_sh.sh scripts/deploy-mobile.sh; do
+            if [ -f "$f" ]; then
+              echo "Checking $f..."
+              bash -n "$f" || { echo "Syntax error in $f"; errors=$((errors+1)); }
+            fi
+          done
+          [ "$errors" -eq 0 ] || exit 1
 
   validate-json:
     name: Validate JSON
@@ -43,20 +61,27 @@ jobs:
           done
           [ "$errors" -eq 0 ] || { echo "JSON validation failed: $errors file(s) with errors"; exit 1; }
 
-  markdown-lint:
-    name: Markdown Lint
+  markdown-check:
+    name: Markdown Check
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      - name: Check markdown files exist
+      - name: Install markdownlint
+        run: npm install -g markdownlint-cli2 2>/dev/null || sudo apt-get install -y -qq markdownlint 2>/dev/null || echo "markdownlint not available, falling back to basic check"
+      - name: Check markdown files
         run: |
           errors=0
           for f in README.md subscriptions/README.md; do
-            if [ -f "$f" ]; then
-              echo "  $f: OK ($(wc -l < "$f") lines)"
-            else
+            if [ ! -f "$f" ]; then
               echo "  $f: MISSING"
               errors=$((errors+1))
+              continue
+            fi
+            echo "  $f: OK ($(wc -l < "$f") lines)"
+            if command -v markdownlint &>/dev/null; then
+              markdownlint "$f" 2>/dev/null || { echo "  $f: lint warnings"; }
+            elif command -v markdownlint-cli2 &>/dev/null; then
+              markdownlint-cli2 "$f" 2>/dev/null || { echo "  $f: lint warnings"; }
             fi
           done
           [ "$errors" -eq 0 ] || exit 1

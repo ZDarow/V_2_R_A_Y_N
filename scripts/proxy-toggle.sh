@@ -1,4 +1,5 @@
 #!/bin/bash
+set -euo pipefail
 # proxy-toggle.sh — вкл/выкл/статус системного прокси (GNOME + KDE)
 
 PROXY_SCRIPT="${BASH_SOURCE[0]%/*}/proxy_set_linux_sh.sh"
@@ -22,7 +23,17 @@ case "${1:-status}" in
         gsettings set org.gnome.system.proxy.https port 10809 2>/dev/null || true
         gsettings set org.gnome.system.proxy.socks host '127.0.0.1' 2>/dev/null || true
         gsettings set org.gnome.system.proxy.socks port 10808 2>/dev/null || true
-        gsettings set org.gnome.system.proxy ignore-hosts "['localhost', '127.0.0.0/8', '::1', '*.local', '.ru', '.su', '.xn--p1ai']" 2>/dev/null || true
+        # Convert comma-separated to gsettings array of strings
+        IFS=',' read -ra HOSTS_ARR <<< "$IGNORE_HOSTS"
+        GSETTINGS_IGNORE="["
+        FIRST=true
+        for H in "${HOSTS_ARR[@]}"; do
+          $FIRST || GSETTINGS_IGNORE+=", "
+          GSETTINGS_IGNORE+="'${H}'"
+          FIRST=false
+        done
+        GSETTINGS_IGNORE+="]"
+        gsettings set org.gnome.system.proxy ignore-hosts "$GSETTINGS_IGNORE" 2>/dev/null || true
         echo "Прокси включён (GNOME)"
       }
       # Прямая установка KDE

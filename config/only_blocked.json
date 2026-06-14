@@ -35,6 +35,11 @@
     },
     {
       "type": "field",
+      "ip": ["geoip:ru-whitelist"],
+      "outboundTag": "direct"
+    },
+    {
+      "type": "field",
       "ip": ["geoip:private"],
       "outboundTag": "direct"
     },

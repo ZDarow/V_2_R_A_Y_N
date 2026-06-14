@@ -8,6 +8,28 @@ info()  { echo -e "${GREEN}[✓]${NC} $1"; }
 warn()  { echo -e "${YELLOW}[!]${NC} $1"; }
 error() { echo -e "${RED}[✗]${NC} $1"; exit 1; }
 
+show_help() {
+  echo "v2rayN Russia Setup — Деинсталлятор"
+  echo ""
+  echo "Использование: $0 [--help] [--backup-dir <путь>]"
+  echo ""
+  echo "Флаги:"
+  echo "  --help              Показать эту справку"
+  echo "  --backup-dir <путь> Сохранить конфиги в указанную директорию вместо удаления"
+  echo ""
+  echo "Без флагов: удаление с подтверждением."
+  exit 0
+}
+
+BACKUP_DIR=""
+while [[ $# -gt 0 ]]; do
+  case "$1" in
+    --help) show_help ;;
+    --backup-dir) BACKUP_DIR="$2"; shift 2 ;;
+    *) warn "Неизвестный флаг: $1 (используйте --help для списка)"; shift ;;
+  esac
+done
+
 echo -e "${CYAN}━━━ v2rayN Russia Setup — Деинсталляция ━━━${NC}"
 echo ""
 echo "Будут удалены:"
@@ -17,13 +39,29 @@ echo "  - ~/.local/share/v2rayN/"
 echo "  - ~/.local/bin/v2rayn (symlink)"
 echo "  - Системный прокси (будет выключен)"
 echo "  - .NET Runtime НЕ удаляется (общий компонент)"
+if [ -n "$BACKUP_DIR" ]; then
+  echo ""
+  echo "  Конфиги будут сохранены в: $BACKUP_DIR"
+fi
 echo ""
 
-read -rp "Продолжить? [y/N] " confirm
-case "$confirm" in
-  [yY]|[yY][eE][sS]) ;;
+read -r -t 30 -n 1 -p "Продолжить? [y/N] " confirm
+echo
+case "${confirm:-n}" in
+  [yY]) ;;
   *) echo "Отменено."; exit 0 ;;
 esac
+
+# 0. Backup (если указан --backup-dir)
+if [ -n "$BACKUP_DIR" ]; then
+  mkdir -p "$BACKUP_DIR"
+  for dir in "$HOME/.config/v2rayN" "$HOME/.local/share/v2rayN"; do
+    if [ -d "$dir" ]; then
+      cp -r "$dir" "$BACKUP_DIR/" 2>/dev/null || true
+      info "Сохранено: $dir → $BACKUP_DIR/"
+    fi
+  done
+fi
 
 # 1. Отключение системного прокси
 info "Отключение системного прокси..."
@@ -38,11 +76,21 @@ if [ -n "$KWC" ]; then
   info "Системный прокси выключен (KDE)"
 fi
 
-# 2. Удаление v2rayN
+# 2. Удаление v2rayN (dpkg / dnf / pacman)
 if command -v dpkg &>/dev/null; then
   if dpkg -l v2rayn &>/dev/null 2>&1; then
-    info "Удаление пакета v2rayN..."
+    info "Удаление пакета v2rayN (dpkg)..."
     sudo dpkg -r v2rayn 2>/dev/null || sudo apt-get remove -y -qq v2rayn 2>/dev/null || true
+  fi
+elif command -v dnf &>/dev/null; then
+  if dnf list installed v2rayn &>/dev/null 2>&1; then
+    info "Удаление пакета v2rayN (dnf)..."
+    sudo dnf remove -y v2rayn 2>/dev/null || true
+  fi
+elif command -v pacman &>/dev/null; then
+  if pacman -Q v2rayn &>/dev/null 2>&1; then
+    info "Удаление пакета v2rayN (pacman)..."
+    sudo pacman -Rs --noconfirm v2rayn 2>/dev/null || true
   fi
 fi
 

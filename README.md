@@ -107,11 +107,12 @@ cd V_2_R_A_Y_N
 
 Откройте на телефоне **одну страницу** и скачайте все файлы нажатиями:
 
-> **👉 [v2rayNG — установка конфигов РФ](https://ZDarow.github.io/V_2_R_A_Y_N/deploy/)**
->
-> Или используйте зеркало: [cdn.jsdelivr.net](https://cdn.jsdelivr.net/gh/ZDarow/V_2_R_A_Y_N@main/deploy/index.html)
->
-> На странице: скачивание JSON + geoip/geosite, копирование подписок, инструкция.
+| Ссылка | Статус |
+|--------|--------|
+| [cdn.jsdelivr.net/gh/ZDarow/V_2_R_A_Y_N@main/deploy/index.html](https://cdn.jsdelivr.net/gh/ZDarow/V_2_R_A_Y_N@main/deploy/index.html) | ✅ Работает сразу |
+| `ZDarow.github.io/V_2_R_A_Y_N/deploy/` | ⚠️ Требуется включить GitHub Pages в Settings репозитория |
+
+**Что на странице:** скачивание JSON + geoip/geosite одной кнопкой, копирование подписок в буфер, пошаговая инструкция — всё с телефона, без терминала.
 
 ### Настройка для РФ на Android
 

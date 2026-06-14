@@ -52,10 +52,13 @@ set_kde_proxy() {
     local PROXY_PORT=$3
     local IGNORE_HOSTS=$4
 
-    if [ "$KDE_SESSION_VERSION" == "6" ]; then
-        KWRITECONFIG="kwriteconfig6"
-    else
+    KWRITECONFIG="kwriteconfig6"
+    if ! command -v "$KWRITECONFIG" &>/dev/null; then
         KWRITECONFIG="kwriteconfig5"
+        if ! command -v "$KWRITECONFIG" &>/dev/null; then
+            echo "KDE: kwriteconfig не найден. Установите kf6-kconfig-bin или kf5-kconfig-bin."
+            return 1
+        fi
     fi
 
     if [ "$MODE" == "manual" ]; then

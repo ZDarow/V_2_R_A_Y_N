@@ -6,7 +6,7 @@
 
 Репозиторий предназначен для быстрого развёртывания v2rayN с:
 
-- Правилами geoip/geosite от **runetfreedom/russia-v2ray-rules-dat** (адаптированными под российские блокировки)
+- Правилами geoip/geosite от **runetfreedom/russia-v2ray-rules-dat** (ветка release, адаптированными под российские блокировки)
 - Чёрными и белыми списками для маршрутизации трафика
 - Оптимизированной конфигурацией Xray-core (Policy, DNS, Sockopt, Fragment)
 - Автоматическим импортом подписок в базу v2rayN
@@ -19,8 +19,8 @@ v2rayN-russia-setup/
 │   ├── routing-russia.json          # Правила роутинга для РФ
 │   └── config-template-xray.json    # Шаблон Xray-core
 ├── scripts/
-│   ├── update-rules.sh              # Обновление geoip/geosite
-│   ├── proxy-toggle.sh              # Вкл/выкл системного прокси
+│   ├── update-rules.sh              # Обновление geoip/geosite (ветка release)
+│   ├── proxy-toggle.sh              # Вкл/выкл системного прокси (GNOME+KDE)
 │   └── proxy_set_linux_sh.sh        # Установка прокси (GNOME/KDE)
 ├── subscriptions/
 │   └── README.md                    # Список подписок
@@ -34,7 +34,7 @@ v2rayN-russia-setup/
 - **ОС:** Linux (Ubuntu 20.04+, Debian 11+, Fedora 38+, Arch Linux)
 - **Архитектура:** x86_64 (amd64) или aarch64 (arm64)
 - **Зависимости:** Git, SQLite3 (устанавливаются автоматически)
-- **.NET Runtime 8.0+** (требуется для v2rayN, устанавливается автоматически на Debian/Ubuntu)
+- **.NET Runtime 10.0+** (требуется для v2rayN, устанавливается автоматически на Debian/Ubuntu)
 
 ## Быстрая установка (одной командой)
 
@@ -63,11 +63,11 @@ cd V_2_R_A_Y_N
 Установщик полностью автоматизирован и не требует участия пользователя:
 
 1. Определяет ОС и архитектуру (x86_64 / aarch64)
-2. Устанавливает зависимости (git, wget, curl, sqlite3, .NET Runtime)
+2. Устанавливает зависимости (git, wget, curl, sqlite3, .NET Runtime 10.0+)
 3. Скачивает последнюю версию v2rayN с GitHub и устанавливает
-4. Клонирует правила geoip/geosite из `runetfreedom/russia-v2ray-rules-dat`
+4. Загружает правила geoip/geosite из **ветки release** `runetfreedom/russia-v2ray-rules-dat`
 5. Устанавливает конфигурацию роутинга `routing-russia.json`
-6. Устанавливает шаблон Xray-core с оптимизациями
+6. Устанавливает шаблон Xray-core с оптимизациями (включая outbound `proxy` с фрагментацией)
 7. Импортирует подписки в базу v2rayN (SQLite)
 8. Настраивает системный прокси (GNOME/KDE)
 
@@ -78,6 +78,8 @@ cd V_2_R_A_Y_N
 ```bash
 bash <(curl -sSL https://raw.githubusercontent.com/ZDarow/V_2_R_A_Y_N/main/scripts/update-rules.sh)
 ```
+
+Правила загружаются из **ветки release** репозитория `runetfreedom/russia-v2ray-rules-dat` (не требуется git clone).
 
 ## Список подписок
 
@@ -103,6 +105,9 @@ bash <(curl -sSL https://raw.githubusercontent.com/ZDarow/V_2_R_A_Y_N/main/scrip
 |----------|-----|
 | vless_universal | https://raw.githubusercontent.com/zieng2/wl/main/vless_universal.txt |
 
+> **Примечание:** При блокировке GitHub используйте зеркала: GitLab, Codeberg, Gitea, GitHack.
+> Полный список зеркал: https://github.com/igareck/vpn-configs-for-russia#readme
+
 ## Оптимизации
 
 ### Policy
@@ -126,20 +131,20 @@ bash <(curl -sSL https://raw.githubusercontent.com/ZDarow/V_2_R_A_Y_N/main/scrip
 
 ### Fragment (анти-DPI)
 
-- `packets: tlshello` — фрагментация TLS ClientHello
+- `packets: tlshello` — фрагментация TLS ClientHello (на outbound **proxy**)
 - `length: 100-200` — размер фрагментов
 - `interval: 10-20` — интервал между фрагментами (ms)
 
 ### Routing
 
 - Блокировка рекламы (`geosite:category-ads-all`)
-- Маршрутизация заблокированных в РФ ресурсов через прокси
-- Прямое соединение с .ru/.su/.рф и geoip:ru
+- Маршрутизация заблокированных в РФ ресурсов через прокси (outbound `proxy`)
+- Прямое соединение с .ru/.su/.рф и geoip:ru (outbound `direct`)
 - Fallback на прокси для всего остального
 
 ## Источники
 
-- [runetfreedom/russia-v2ray-rules-dat](https://github.com/runetfreedom/russia-v2ray-rules-dat) — правила geoip/geosite для РФ
+- [runetfreedom/russia-v2ray-rules-dat](https://github.com/runetfreedom/russia-v2ray-rules-dat) — правила geoip/geosite для РФ (ветка release)
 - [igareck/vpn-configs-for-russia](https://github.com/igareck/vpn-configs-for-russia) — конфиги и списки
 - [zieng2/wl](https://github.com/zieng2/wl) — белые списки
 - [2dust/v2rayN](https://github.com/2dust/v2rayN) — v2rayN GUI

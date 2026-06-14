@@ -47,3 +47,14 @@ https://raw.githubusercontent.com/zieng2/wl/main/vless_universal.txt
 
 **Дополнительный URL:**
 - https://codeberg.org/zieng2/wl/raw/branch/main/vless_universal.txt
+
+## Зеркала (на случай блокировки GitHub)
+
+При блокировке GitHub используйте следующие зеркала:
+
+| Платформа | URL igareck | URL zieng2 |
+|-----------|-------------|------------|
+| **GitLab** | https://gitlab.com/igareck/vpn-configs-for-russia | https://gitlab.com/zieng2/wl |
+| **Codeberg** | https://codeberg.org/igareck/vpn-configs-for-russia | https://codeberg.org/zieng2/wl |
+| **Gitea** | https://gitea.com/igareck/vpn-configs-for-russia | — |
+| **GitHack** (RAW proxy) | https://raw.githack.com/igareck/vpn-configs-for-russia/main/ | — |

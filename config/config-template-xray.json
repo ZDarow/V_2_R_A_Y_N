@@ -58,13 +58,7 @@
   "outbounds": [
     {
       "protocol": "freedom",
-      "settings": {
-        "fragment": {
-          "packets": "tlshello",
-          "length": "100-200",
-          "interval": "10-20"
-        }
-      },
+      "settings": {},
       "tag": "direct",
       "streamSettings": {
         "sockopt": {
@@ -80,6 +74,27 @@
     {
       "protocol": "blackhole",
       "tag": "block"
+    },
+    {
+      "protocol": "freedom",
+      "settings": {
+        "fragment": {
+          "packets": "tlshello",
+          "length": "100-200",
+          "interval": "10-20"
+        }
+      },
+      "tag": "proxy",
+      "streamSettings": {
+        "sockopt": {
+          "tcpFastOpen": true,
+          "tcpKeepAliveIdle": 45,
+          "tcpKeepAliveInterval": 15,
+          "tcpUserTimeout": 10000,
+          "domainStrategy": "UseIP",
+          "tcpcongestion": "bbr"
+        }
+      }
     }
   ],
   "routing": {

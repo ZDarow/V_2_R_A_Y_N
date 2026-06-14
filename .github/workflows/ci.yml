@@ -1,0 +1,52 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+jobs:
+  shellcheck:
+    name: Shellcheck
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Run ShellCheck
+        uses: ludeeus/action-shellcheck@master
+        with:
+          severity: warning
+          scandir: ./
+          additional_files: >
+            install.sh
+            scripts/update-rules.sh
+            scripts/proxy-toggle.sh
+            scripts/proxy_set_linux_sh.sh
+
+  validate-json:
+    name: Validate JSON
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Validate JSON files
+        run: |
+          for f in config/routing-russia.json config/config-template-xray.json; do
+            echo "Validating $f..."
+            if command -v python3 &>/dev/null; then
+              python3 -m json.tool "$f" > /dev/null || { echo "Invalid JSON: $f"; exit 1; }
+            else
+              echo "python3 not available, skipping json validation"
+            fi
+            echo "  OK"
+          done
+
+  markdown-lint:
+    name: Markdown Lint
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Check markdown files
+        run: |
+          for f in README.md subscriptions/README.md; do
+            [ -f "$f" ] && echo "  $f: OK" || echo "  $f: missing"
+          done

@@ -4,11 +4,13 @@ set -euo pipefail
 
 # v2rayN Russia Setup — полностью автоматизированный установщик
 # Использование:
-#   curl -sSL https://raw.githubusercontent.com/ZDarow/V_2_R_A_Y_N/main/install.sh | bash
+#   bash <(curl -sSL https://raw.githubusercontent.com/ZDarow/V_2_R_A_Y_N/main/install.sh)
 #   или
 #   ./install.sh [--force-reinstall] [--skip-v2rayn] [--repo-url <url>]
 
 REPO_URL="${REPO_URL:-https://github.com/ZDarow/V_2_R_A_Y_N.git}"
+RULES_RELEASE_URL="https://raw.githubusercontent.com/runetfreedom/russia-v2ray-rules-dat/release"
+DOTNET_VERSION="10.0"
 
 # ---- Цвета и утилиты ----
 RED='\033[0;31m'; GREEN='\033[0;32m'; YELLOW='\033[1;33m'; CYAN='\033[0;36m'; NC='\033[0m'
@@ -75,15 +77,26 @@ fi
 
 # ---- 2. Установка .NET Runtime (если не установлен) ----
 header "Проверка .NET Runtime"
+DOTNET_INSTALLED=false
 if command -v dotnet &>/dev/null; then
+  DOTNET_VER=$(dotnet --version 2>/dev/null | cut -d. -f1)
   info ".NET Runtime найден: $(dotnet --version 2>/dev/null)"
-else
-  warn ".NET Runtime не найден. v2rayN требует .NET 8.0+."
-  if command -v apt-get &>/dev/null; then
-    info "Установка dotnet-runtime-8.0..."
-    sudo apt-get install -y -qq dotnet-runtime-8.0 2>/dev/null || warn "Не удалось установить .NET через apt. Установите вручную: https://dotnet.microsoft.com/download"
+  if [ "$DOTNET_VER" -ge 10 ] 2>/dev/null; then
+    DOTNET_INSTALLED=true
   else
-    warn "Установите .NET Runtime 8.0+ вручную: https://dotnet.microsoft.com/download"
+    warn "Требуется .NET 10.0+, установлена версия $(dotnet --version 2>/dev/null). Попытка обновления..."
+  fi
+fi
+if [ "$DOTNET_INSTALLED" = false ]; then
+  if command -v apt-get &>/dev/null; then
+    info "Установка dotnet-runtime-10.0..."
+    sudo apt-get install -y -qq dotnet-runtime-10.0 2>/dev/null || {
+      warn "Пакет dotnet-runtime-10.0 недоступен в текущем репозитории. Пробуем dotnet-runtime-8.0..."
+      sudo apt-get install -y -qq dotnet-runtime-8.0 2>/dev/null || \
+      warn "Не удалось установить .NET через apt. Установите вручную: https://dotnet.microsoft.com/download"
+    }
+  else
+    warn "Установите .NET Runtime 10.0+ вручную: https://dotnet.microsoft.com/download"
   fi
 fi
 
@@ -111,10 +124,16 @@ if [ "$SKIP_V2RAYN" = false ]; then
     sudo dpkg -i /tmp/v2rayN.deb 2>/dev/null || true
     sudo apt-get install -f -y -qq 2>/dev/null || true
     rm -f /tmp/v2rayN.deb
+    # Проверка v2rayN: сначала PATH, потом /opt/v2rayN/
     if command -v v2rayn &>/dev/null; then
       info "v2rayN установлен: $(v2rayn --version 2>/dev/null || true)"
+    elif [ -f /opt/v2rayN/v2rayn ]; then
+      info "v2rayN установлен в /opt/v2rayN/"
+      # Добавляем в PATH для текущего пользователя
+      mkdir -p "$HOME/.local/bin"
+      ln -sf /opt/v2rayN/v2rayn "$HOME/.local/bin/v2rayn" 2>/dev/null || true
     else
-      warn "v2rayN установлен, но команда 'v2rayn' не найдена в PATH. Проверьте /opt/v2rayN/"
+      warn "v2rayN установлен, но бинарник не найден. Проверьте /opt/v2rayN/"
     fi
   fi
 fi
@@ -128,23 +147,32 @@ mkdir -p "$V2RAYN_CONFIG_DIR" "$V2RAYN_BIN_DIR" "$V2RAYN_BINCONFIG_DIR" "$V2RAYN
 
 # ---- 5. Правила роутинга (geoip/geosite) ----
 header "Установка правил geoip/geosite"
-RULES_SRC="$SCRIPT_DIR/rules"
-if [ ! -f "$RULES_SRC/geoip.dat" ] || [ ! -f "$RULES_SRC/geosite.dat" ]; then
-  info "Правила не найдены в репозитории. Клонирование runetfreedom/russia-v2ray-rules-dat..."
-  TMP_RULES=$(mktemp -d)
-  if git clone --depth=1 https://github.com/runetfreedom/russia-v2ray-rules-dat.git "$TMP_RULES/rules" 2>/dev/null; then
-    cp -f "$TMP_RULES/rules/geoip.dat" "$V2RAYN_BIN_DIR/geoip.dat" 2>/dev/null || warn "geoip.dat не найден"
-    cp -f "$TMP_RULES/rules/geosite.dat" "$V2RAYN_BIN_DIR/geosite.dat" 2>/dev/null || warn "geosite.dat не найден"
-    rm -rf "$TMP_RULES"
-    info "Правила geoip/geosite установлены"
-  else
-    rm -rf "$TMP_RULES"
-    warn "Не удалось клонировать правила. Проверьте подключение."
+download_rule() {
+  local url="$1"
+  local dest="$2"
+  local name="$3"
+  if command -v curl &>/dev/null; then
+    curl -sSL --connect-timeout 15 -o "$dest" "$url" && return 0
   fi
-else
+  if command -v wget &>/dev/null; then
+    wget -q --timeout=15 -O "$dest" "$url" && return 0
+  fi
+  return 1
+}
+RULES_SRC="$SCRIPT_DIR/rules"
+if [ -f "$RULES_SRC/geoip.dat" ] && [ -f "$RULES_SRC/geosite.dat" ]; then
   cp -f "$RULES_SRC/geoip.dat" "$V2RAYN_BIN_DIR/geoip.dat"
   cp -f "$RULES_SRC/geosite.dat" "$V2RAYN_BIN_DIR/geosite.dat"
   info "Правила geoip/geosite установлены из репозитория"
+else
+  info "Загрузка правил из runetfreedom (ветка release)..."
+  download_rule "$RULES_RELEASE_URL/geoip.dat" "$V2RAYN_BIN_DIR/geoip.dat" "geoip.dat" || \
+    warn "Не удалось загрузить geoip.dat"
+  download_rule "$RULES_RELEASE_URL/geosite.dat" "$V2RAYN_BIN_DIR/geosite.dat" "geosite.dat" || \
+    warn "Не удалось загрузить geosite.dat"
+  if [ -f "$V2RAYN_BIN_DIR/geoip.dat" ] && [ -s "$V2RAYN_BIN_DIR/geoip.dat" ]; then
+    info "Правила geoip/geosite установлены (ветка release)"
+  fi
 fi
 
 # ---- 6. Конфигурация роутинга и Xray ----

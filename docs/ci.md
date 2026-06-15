@@ -25,12 +25,14 @@
 **Проверяемые файлы:**
 - `install.sh`
 - `uninstall.sh`
+- `lib/common.sh`
 - `scripts/update-rules.sh`
 - `scripts/proxy-toggle.sh`
 - `scripts/proxy_set_linux_sh.sh`
 - `scripts/deploy-mobile.sh`
 - `scripts/generate-mobile-url.sh`
 - `scripts/mobile-setup-termux.sh`
+- `scripts/mobile-apply-routing.sh`
 
 **Уровень:** `warning` (ошибки и предупреждения).
 
@@ -41,9 +43,11 @@
 ```bash
 for f in \
   install.sh uninstall.sh \
+  lib/common.sh \
   scripts/update-rules.sh scripts/proxy-toggle.sh \
   scripts/proxy_set_linux_sh.sh scripts/deploy-mobile.sh \
-  scripts/generate-mobile-url.sh scripts/mobile-setup-termux.sh
+  scripts/generate-mobile-url.sh scripts/mobile-setup-termux.sh \
+  scripts/mobile-apply-routing.sh
 do
   bash -n "$f" || errors=$((errors+1))
 done

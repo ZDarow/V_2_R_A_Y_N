@@ -29,6 +29,26 @@
                     └── config-template-xray.json      ← только для v2rayN
 ```
 
+## Авто-применение правил роутинга (Termux)
+
+После копирования файлов в assets/ их нужно импортировать в v2rayNG.
+Для автоматизации этого шага (2 тапа вместо 5):
+
+```bash
+# Скачайте скрипт и запустите:
+curl -sSL https://raw.githubusercontent.com/ZDarow/V_2_R_A_Y_N/main/scripts/mobile-apply-routing.sh | bash
+
+# Или укажите пресет напрямую:
+bash scripts/mobile-apply-routing.sh russia    # «Всё через прокси»
+bash scripts/mobile-apply-routing.sh blocked   # «Только заблокированное»
+```
+
+Скрипт:
+1. Загружает JSON правил из репозитория
+2. Копирует в буфер обмена (`termux-clipboard-set`)
+3. Открывает v2rayNG (`am start`)
+4. Остаётся: ≡ → Маршрутизация → ⋮ → Импорт из буфера обмена
+
 ## deploy-mobile.sh — автоматический деплой
 
 Скрипт для автоматической загрузки и доставки конфигов на Android-устройство.

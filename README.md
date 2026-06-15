@@ -79,14 +79,32 @@ cd V_2_R_A_Y_N
 1. Определяет ОС и архитектуру (x86_64 / aarch64)
 2. Устанавливает зависимости (git, wget, curl, sqlite3, .NET Runtime 10.0+)
 3. Скачивает последнюю версию v2rayN с GitHub и устанавливает
-4. Загружает правила geoip/geosite из **ветки release** `runetfreedom/russia-v2ray-rules-dat`
-5. Устанавливает конфигурации роутинга: `routing-russia.json` (всё через прокси) + `only_blocked.json` (только заблокированное — для мобильного интернета)
+4. Загружает правила geoip/geosite из **ветки release** `runetfreedom/russia-v2ray-rules-dat` (retry 3x + SHA256 + кэш)
+5. Устанавливает конфигурации роутинга: 5 JSON-файлов (v2rayN + v2rayNG форматы)
 6. Устанавливает шаблон Xray-core с оптимизациями (outbound `proxy` с фрагментацией, DNS через прокси, Discord VoIP)
-7. Импортирует подписки в базу v2rayN (SQLite), включая whitelist CIDR/IP от hxehex
-8. Настраивает системный прокси (GNOME/KDE)
-9. Выводит предупреждение об отключении allowInsecure с 1 августа 2026
+7. Устанавливает скрипты управления + **systemd timer** для еженедельного авто-обновления geoip/geosite
+8. Импортирует подписки в базу v2rayN (SQLite), включая whitelist CIDR/IP от hxehex
+9. Настраивает системный прокси (GNOME/KDE)
+10. Выводит предупреждение об отключении allowInsecure с 1 августа 2026
 
 Работает как при локальном запуске, так и через `curl | bash`. Временные файлы автоматически очищаются.
+
+### Авто-обновление правил
+
+После установки `update-rules.sh` запускается **еженедельно** через systemd timer:
+```bash
+# Проверить статус:
+systemctl --user list-timers v2rayn-rules-update.timer
+
+# Посмотреть лог:
+journalctl --user -u v2rayn-rules-update.service
+
+# Ручной запуск:
+~/.local/bin/v2rayn-update-rules
+```
+
+Все загрузки имеют retry 3 попытки с экспоненциальной задержкой,
+SHA256 верификацию и защиту от конкурентного запуска (lock-файл).
 
 ## v2rayNG — Android-клиент
 

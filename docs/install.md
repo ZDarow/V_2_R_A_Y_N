@@ -32,11 +32,11 @@ cd V_2_R_A_Y_N
 ```
  1. Определение системы     — архитектура (x86_64/aarch64), OS, root-проверка
  2. Установка зависимостей  — git, wget, curl, sqlite3, ca-certificates
- 3. Установка .NET 10.0     — dotnet-runtime-10.0 (требуется для v2rayN 7.22+)
+ 3. Установка .NET 10.0     — dotnet-runtime-10.0 (+ MS repo fallback)
  4. Установка v2rayN        — загрузка .deb с GitHub, dpkg -i, symlink
- 5. Установка geoip/geosite — загрузка из runetfreedom (ветка release)
- 6. Конфигурация            — routing-russia.json, config-template-xray.json, only_blocked.json
- 7. Скрипты управления      — proxy-toggle.sh, proxy_set_linux_sh.sh
+ 5. Установка geoip/geosite — retry 3x, SHA256 верификация, кэш fallback
+ 6. Конфигурация            — 5 JSON: routing, only_blocked, config-template, v2rayng-*
+ 7. Скрипты управления      — proxy-toggle, proxy_set, update-rules (+ systemd timer)
  8. Импорт подписок         — 4 подписки в SQLite (guiNDB.db)
  9. Системный прокси        — GNOME (gsettings) или KDE (kwriteconfig)
 10. Очистка                 — удаление временных файлов
@@ -70,18 +70,46 @@ cd V_2_R_A_Y_N
 
 #### 5. Правила роутинга (geoip/geosite)
 - Скачиваются из `runetfreedom/russia-v2ray-rules-dat` (ветка `release`)
-- Проверяются через `validate_dat()`: файл существует и не пуст
-- При ошибке загрузки — предупреждение, установка продолжается
+- **Retry 3 попытки** с экспоненциальной задержкой (2→4→8с) при сетевых ошибках
+- **SHA256 верификация** через `.sha256` файлы (если доступны)
+- **Кэширование** в `~/.cache/v2rayN/rules/` — при неудаче загрузки используется кэш
+- При полном отсутствии файла — предупреждение, установка продолжается
 
 #### 6. Конфигурация
-Копируются файлы в `~/.config/v2rayN/`:
+Копируются файлы в целевые директории:
 | Файл | Назначение | Целевая директория |
 |------|-----------|-------------------|
-| `routing-russia.json` | Роутинг «Всё через прокси» | `~/.config/v2rayN/` |
-| `only_blocked.json` | Роутинг «Только заблокированное» | `~/.config/v2rayN/` |
+| `routing-russia.json` | Роутинг «Всё через прокси» (v2rayN object) | `~/.config/v2rayN/` |
+| `only_blocked.json` | Роутинг «Только заблокированное» (v2rayN object) | `~/.config/v2rayN/` |
+| `v2rayng-routing-russia.json` | Роутинг «Всё через прокси» (v2rayNG array) | `~/.config/v2rayN/` |
+| `v2rayng-only-blocked.json` | Роутинг «Только заблокированное» (v2rayNG array) | `~/.config/v2rayN/` |
 | `config-template-xray.json` | Шаблон Xray-core | `~/.local/share/v2rayN/binConfigs/` |
 
-#### 7. Импорт подписок
+#### 7. Скрипты управления + авто-обновление
+
+Устанавливаются в `~/.local/share/v2rayN/scripts/`:
+
+| Скрипт | Назначение |
+|--------|-----------|
+| `proxy-toggle.sh` | Вкл/выкл системного прокси (GNOME/KDE) |
+| `proxy_set_linux_sh.sh` | Библиотека настройки прокси |
+| `update-rules.sh` | Обновление geoip/geosite с retry, SHA256, кэшем |
+
+Создаётся алиас:
+```bash
+~/.local/bin/v2rayn-update-rules   # → ~/.local/share/v2rayN/scripts/update-rules.sh
+```
+
+**Systemd timer** для авто-обновления правил:
+```bash
+# Timer устанавливается автоматически при install.sh
+systemctl --user list-timers v2rayn-rules-update.timer
+# Расписание: еженедельно + случайная задержка до 6ч
+# Просмотр лога:
+journalctl --user -u v2rayn-rules-update.service
+```
+
+#### 8. Импорт подписок
 Создаётся таблица `SubItem` в `guiNDB.db` (если не существует) и добавляются 4 подписки:
 1. **BLACK-RUS-001** — Чёрные списки РФ (весь трафик через VPN), интервал 1440 мин
 2. **WHITE-RUS-001** — Белые списки РФ, интервал 1440 мин
@@ -90,7 +118,7 @@ cd V_2_R_A_Y_N
 
 Используется `INSERT OR IGNORE` — существующие подписки не перезаписываются.
 
-#### 8. Системный прокси
+#### 9. Системный прокси
 - GNOME/Cinnamon/XFCE/MATE: `gsettings set org.gnome.system.proxy`
 - KDE Plasma: `kwriteconfig5`/`kwriteconfig6` + dbus-send
 - Другие DE: предупреждение, настройка вручную
@@ -109,11 +137,13 @@ cd V_2_R_A_Y_N
 ### Что удаляется
 
 1. **Системный прокси** — выключается (mode 'none')
-2. **Пакет v2rayN** — `dpkg -r` / `dnf remove` / `pacman -Rs` (в зависимости от менеджера)
-3. **/opt/v2rayN/** — остатки после удаления пакета
-4. **~/.local/bin/v2rayn** — symlink
-5. **~/.config/v2rayN/** — все конфиги
-6. **~/.local/share/v2rayN/** — бинарники и конфиги Xray
+2. **Systemd timer v2rayn-rules-update** — отключается и удаляется
+3. **Пакет v2rayN** — `dpkg -r` / `dnf remove` / `pacman -Rs`
+4. **/opt/v2rayN/** — остатки после удаления пакета
+5. **~/.local/bin/v2rayn, ~/.local/bin/v2rayn-update-rules** — symlink
+6. **~/.config/v2rayN/** — все конфиги
+7. **~/.local/share/v2rayN/** — бинарники, скрипты, конфиги Xray
+8. **~/.cache/v2rayN/** — кэш правил geoip/geosite
 
 **.NET Runtime не удаляется** — он может использоваться другими приложениями.
 

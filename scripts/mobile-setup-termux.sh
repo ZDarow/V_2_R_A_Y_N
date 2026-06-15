@@ -21,7 +21,7 @@ set -euo pipefail
 # Основано на формате из discussion #4761:
 #   https://github.com/2dust/v2rayNG/discussions/4761
 
-SCRIPT_VERSION="1.1.0"
+SCRIPT_VERSION="1.2.0"
 REPO="https://github.com/ZDarow/V_2_R_A_Y_N"
 BRANCH="main"
 RULES_RELEASE_URL="https://raw.githubusercontent.com/runetfreedom/russia-v2ray-rules-dat/release"
@@ -147,9 +147,9 @@ for f in "$TEMP_DIR/assets"/*; do
   fi
 done
 
-# Копирование JSON правил в буфер обмена для clipboard-импорта
+# ---- 6. Буфер обмена + авто-открытие v2rayNG ----
 if [ "$HAS_CLIPBOARD" = true ]; then
-  header "Буфер обмена"
+  header "Буфер обмена + авто-импорт"
 
   echo ""
   echo "  Выберите пресет для копирования в буфер обмена:"
@@ -163,17 +163,43 @@ if [ "$HAS_CLIPBOARD" = true ]; then
     2|"only-blocked")
       RULES_FILE="$TEMP_DIR/assets/v2rayng-only-blocked.json"
       RULES_NAME="v2rayng-only-blocked.json"
+      PRESET_LABEL="Только заблокированное"
       ;;
     *)
       RULES_FILE="$TEMP_DIR/assets/v2rayng-routing-russia.json"
       RULES_NAME="v2rayng-routing-russia.json"
+      PRESET_LABEL="Всё через прокси"
       ;;
   esac
 
   if [ -f "$RULES_FILE" ]; then
-    termux-clipboard-set < "$RULES_FILE" && \
+    # Копируем в буфер обмена
+    CLIPBOARD_JSON=$(cat "$RULES_FILE")
+    termux-clipboard-set "$CLIPBOARD_JSON" && \
       info "Правила ($RULES_NAME) скопированы в буфер обмена!" && \
       CLIPBOARD_OK=true
+
+    # Авто-открытие v2rayNG
+    if command -v am &>/dev/null && [ "${INSTALL_V2RAYNG:-false}" = true ]; then
+      echo ""
+      echo -n "  Открываю v2rayNG ... "
+      if am start -n "${V2RAYNG_PKG:-com.v2ray.ang.fdroid}/.ui.MainActivity" 2>/dev/null; then
+        echo "OK"
+        APP_OPENED=true
+        sleep 1
+      else
+        echo "попытка com.v2ray.ang..."
+        if am start -n "com.v2ray.ang/.ui.MainActivity" 2>/dev/null; then
+          echo "OK"
+          APP_OPENED=true
+          sleep 1
+        else
+          echo "ОШИБКА"
+          warn "Не удалось открыть v2rayNG. Откройте вручную."
+          APP_OPENED=false
+        fi
+      fi
+    fi
   fi
 fi
 
@@ -183,78 +209,64 @@ else
   warn "Не удалось скопировать файлы. Проверьте разрешения."
 fi
 
-# ---- 6. Вывод инструкции ----
-header "Настройка v2rayNG завершена"
-
-echo ""
-echo "  Файлы скопированы в:"
-echo "    ${V2RAYNG_ASSETS}/"
-echo ""
-echo "  Файлы:"
-for f in "$TEMP_DIR/assets"/*; do
-  echo "    · $(basename "$f")"
-done
-
-echo ""
-echo "━━━ Пошаговая инструкция для v2rayNG ━━━"
+# ---- 7. Deep link для подписки (по выбранному пресету) ----
+header "Deep link для подписки"
+echo "  v2rayNG поддерживает однокликовый импорт подписки:"
 echo ""
 
-echo "  ШАГ 1 — Импорт правил роутинга:"
+case "${choice:-1}" in
+  2|"only-blocked")
+    SUB_LABEL="igareck WHITE (только РФ через прокси)"
+    SUB_URL="https://raw.githubusercontent.com/igareck/vpn-configs-for-russia/refs/heads/main/Vless-Reality-White-Lists-Rus-Mobile.txt"
+    ;;
+  *)
+    SUB_LABEL="igareck BLACK (весь трафик через прокси)"
+    SUB_URL="https://raw.githubusercontent.com/igareck/vpn-configs-for-russia/refs/heads/main/BLACK_VLESS_RUS_mobile.txt"
+    ;;
+esac
+
+echo "  Рекомендуемая подписка: $SUB_LABEL"
 echo ""
-echo "  Метод A (рекомендуемый) — из буфера обмена:"
-echo "    Откройте v2rayNG → ⋮ (меню слева) → Маршрутизация"
-echo "    → ⋮ (три точки сверху) → Импорт правил из буфера обмена"
-echo "    → Нажмите OK для подтверждения"
-if [ "${CLIPBOARD_OK:-false}" = true ]; then
-  echo "    ✅ Правила уже в буфере обмена!"
-else
-  echo "    ⚠️  Скопируйте JSON вручную или используйте Метод B"
+echo "  Нажмите на ссылку в браузере телефона:"
+echo "    v2rayng://install-sub/$(echo -n "$SUB_URL" | python3 -c "import sys,urllib.parse; print(urllib.parse.quote(sys.stdin.read(), safe=''))" 2>/dev/null || echo "$SUB_URL")"
+echo ""
+echo "  Или скопируйте URL:"
+echo "    $SUB_URL"
+
+# ---- 8. Финальная инструкция — 2 тапа! ----
+header "Осталось 2 тапа в v2rayNG"
+
+echo ""
+echo "  ╔══════════════════════════════════════════════╗"
+echo "  ║  ПРАВИЛА УЖЕ В БУФЕРЕ ОБМЕНА!                ║"
+if [ "${APP_OPENED:-false}" = true ]; then
+echo "  ║  v2rayNG УЖЕ ОТКРЫТ!                          ║"
 fi
-echo ""
-echo "  Метод B — из файла:"
-echo "    Откройте v2rayNG → ⋮ (меню слева) → Маршрутизация"
-echo "    → ⋮ (три точки сверху) → Импорт правил из файла"
-echo "    → Выберите один из файлов в assets/"
-echo ""
-
-echo "  ШАГ 2 — Смените доменную стратегию:"
-echo "    Маршрутизация → поле «Доменная стратегия» → выберите"
-echo ""
-echo "    ▸ IPOnDemand (РЕКОМЕНДУЕТСЯ) — запрашивать DNS только"
-echo "      для доменов, которые реально используются"
-echo "    ▸ IPIfNonMatch — только если IPOnDemand не работает"
-echo "    ▸ AsIs — отключает geoip, не используйте с geoip:ru"
+echo "  ║                                              ║"
+echo "  ║  1. Нажмите ≡ → Маршрутизация                ║"
+echo "  ║  2. Нажмите ⋮ → Импорт из буфера обмена     ║"
+echo "  ╚══════════════════════════════════════════════╝"
 echo ""
 
-echo "  ШАГ 3 — Добавьте подписку с серверами:"
-echo "    v2rayNG → ➕ (плюс) → Import from URL"
-echo "    Вставьте URL своей подписки"
+echo "  ─── После импорта ───"
 echo ""
-echo "    Бесплатные подписки (один из вариантов):"
-echo "    · igareck BLACK (весь трафик через прокси):"
-echo "      https://raw.githubusercontent.com/igareck/vpn-configs-for-russia/refs/heads/main/BLACK_VLESS_RUS_mobile.txt"
-echo "    · igareck WHITE (только РФ через прокси):"
-echo "      https://raw.githubusercontent.com/igareck/vpn-configs-for-russia/refs/heads/main/Vless-Reality-White-Lists-Rus-Mobile.txt"
-echo "    · zieng2/wl:"
-echo "      https://raw.githubusercontent.com/zieng2/wl/main/vless_universal.txt"
+echo "  • Доменная стратегия: Маршрутизация →"
+echo "    поле «Доменная стратегия» → IPOnDemand"
 echo ""
-
-echo "  ШАГ 4 — Включите отпечаток SHA256 сертификата:"
-echo "    Долгое нажатие на подписку → ✏️ (карандаш)"
-echo "    → Отпечаток сертификата → Включить"
+echo "  • Подписка: ➕ → Import from URL → вставьте URL"
+echo "    (см. deep link выше)"
+echo ""
+echo "  • Отпечаток SHA256: долгое нажатие на подписку →"
+echo "    ✏️ (карандаш) → Отпечаток сертификата → Вкл."
+echo ""
+echo "  • Подключение: ☁️ (обновить) → выбрать сервер → V"
 echo ""
 
-echo "  ШАГ 5 — Обновите подписку и подключитесь:"
-echo "    Нажмите значок облака ☁️ или ⋮ → Обновить все подписки"
-echo "    Выберите сервер → нажмите V (вибро)"
-echo "    Должен загореться зелёный индикатор VPN"
 echo ""
-
-echo "  ШАГ 6 — Проверка:"
-echo "    Откройте в браузере:"
-echo "    - https://2ip.ru — должен показать IP вашего VPN-сервера"
-echo "    - https://www.google.com — должен открываться"
-echo ""
+echo -e "${GREEN}✅ Готово!${NC}"
+echo -e "   Версия скрипта: $SCRIPT_VERSION"
+echo -e "   Применение правил: 2 тапа в v2rayNG"
+echo -e "   Основано на формате v2rayNG Discussion #4761"
 
 if [ "$FILES_COPIED" -eq 0 ]; then
   warn "Файлы не скопированы. Выполните шаги вручную:"
@@ -262,8 +274,3 @@ if [ "$FILES_COPIED" -eq 0 ]; then
   echo "     $REPO/tree/main/config/"
   echo "  2. Переместите в: $V2RAYNG_ASSETS"
 fi
-
-echo ""
-echo -e "${GREEN}✅ Готово!${NC}"
-echo -e "   Версия скрипта: $SCRIPT_VERSION"
-echo -e "   Основано на формате v2rayNG Discussion #4761"

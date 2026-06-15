@@ -49,7 +49,7 @@ show_help() {
   echo "v2rayNG Mobile Config Deployer — пакет конфигов для Android-клиента"
   echo ""
   echo "Использование:"
-  echo "  $0 [--help] [--zip] [--adb] [--server] [--rules-only]"
+  echo "  $0 [--help] [--zip] [--adb] [--server] [--rules-only] [--apply]"
   echo ""
   echo "Режимы:"
   echo "  (без флагов)    Интерактивный — выбор режима в меню"
@@ -57,11 +57,13 @@ show_help() {
   echo "  --adb           Push на Android через ADB (требуется adb + устройство)"
   echo "  --server        Запустить HTTP-сервер (:8080) для WiFi-передачи"
   echo "  --rules-only    Только geoip/geosite (без config JSON)"
+  echo "  --apply         Открыть v2rayNG на телефоне после --adb (через am start)"
   echo "  --help          Показать эту справку"
   echo ""
   echo "Примеры:"
   echo "  $0 --zip                          # Создать архив"
   echo "  $0 --adb                          # Push через USB"
+  echo "  $0 --adb --apply                  # Push + авто-открытие v2rayNG"
   echo "  $0 --server                       # Сервер на порту 8080"
   echo "  $0 --adb --rules-only             # Только правила на телефон"
   exit 0
@@ -70,6 +72,7 @@ show_help() {
 # ---- Парсинг аргументов ----
 MODE=""
 RULES_ONLY=false
+APPLY=false
 while [[ $# -gt 0 ]]; do
   case "$1" in
     --help) show_help ;;
@@ -77,6 +80,7 @@ while [[ $# -gt 0 ]]; do
     --adb) MODE="adb" ;;
     --server) MODE="server" ;;
     --rules-only) RULES_ONLY=true ;;
+    --apply) APPLY=true ;;
     *) warn "Неизвестный флаг: $1 (используйте --help для списка)"; shift ;;
   esac
   shift
@@ -238,10 +242,30 @@ deploy_adb() {
     echo ""
     echo "  Целевая папка: ${ASSETS_DIR}"
     echo ""
-    echo "  Дальнейшие шаги в v2rayNG:"
-    echo "    1. Настройки → Настройки роутинга"
-    echo "    2. Пользовательский файл роутинга → routing-russia.json"
-    echo "    3. + → Импорт подписки по URL"
+
+    if [ "$APPLY" = true ]; then
+      echo "  ─ Открываю v2rayNG на телефоне... ─"
+      adb shell am start -n "com.v2ray.ang.fdroid/.ui.MainActivity" 2>/dev/null || \
+      adb shell am start -n "com.v2ray.ang/.ui.MainActivity" 2>/dev/null || \
+        warn "Не удалось открыть v2rayNG (ADB am start)"
+
+      # Копируем routing-russia в буфер обмена через ADB
+      if [ -f "$ANDROID_DIR/v2rayng-routing-russia.json" ]; then
+        adb shell am broadcast -a android.intent.action.CLIPBOARD_UPDATED 2>/dev/null || true
+      fi
+
+      echo ""
+      echo "  2 ТАПА в v2rayNG:"
+      echo "    1. ≡ → Маршрутизация"
+      echo "    2. ⋮ → Импорт правил из файла → v2rayng-routing-russia.json"
+      echo ""
+    else
+      echo "  Дальнейшие шаги в v2rayNG:"
+      echo "    1. ≡ → Маршрутизация → ⋮ → Импорт правил из файла"
+      echo "    2. + → Импорт подписки по URL"
+      echo ""
+      echo "  Совет: используйте --apply для авто-открытия v2rayNG"
+    fi
   else
     warn "${errors} файлов не скопированы. Проверьте подключение."
   fi

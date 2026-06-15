@@ -234,19 +234,34 @@
   <div style="height:6px;"></div>
 
   <div style="margin:12px 0 8px;font-size:12px;color:var(--text-dim);border-top:1px solid rgba(255,255,255,0.06);padding-top:10px;">
-    📋 Правила роутинга для v2rayNG:
+    📋 Правила роутинга для v2rayNG — скопировать в буфер:
   </div>
 
-  <a class="btn btn-dat" href="https://raw.githubusercontent.com/ZDarow/V_2_R_A_Y_N/main/config/v2rayng-routing-russia.json" download="v2rayng-routing-russia.json">
-    v2rayng-routing-russia.json
+  <button class="btn btn-primary" onclick="copyJSON(this, 'v2rayng-routing-russia.json')">
+    📋 v2rayng-routing-russia.json
     <span class="badge badge-green">всё через прокси</span>
     <span class="size">~2 KB</span>
+  </button>
+
+  <button class="btn btn-dat" onclick="copyJSON(this, 'v2rayng-only-blocked.json')">
+    📋 v2rayng-only-blocked.json
+    <span class="badge badge-green">только заблокированное</span>
+    <span class="size">~2 KB</span>
+  </button>
+
+  <p style="font-size:11px;color:var(--text-dim);margin:6px 0 0;">
+    ↑ Нажмите на кнопку — JSON скопируется в буфер обмена телефона.
+    Затем в v2rayNG: ≡ → Маршрутизация → ⋮ → Импорт из буфера обмена.
+  </p>
+
+  <a class="btn btn-dat" href="https://raw.githubusercontent.com/ZDarow/V_2_R_A_Y_N/main/config/v2rayng-routing-russia.json" download="v2rayng-routing-russia.json" style="margin-top:4px;">
+    v2rayng-routing-russia.json
+    <span class="size">скачать файл</span>
   </a>
 
   <a class="btn btn-dat" href="https://raw.githubusercontent.com/ZDarow/V_2_R_A_Y_N/main/config/v2rayng-only-blocked.json" download="v2rayng-only-blocked.json">
     v2rayng-only-blocked.json
-    <span class="badge badge-green">только заблокированное</span>
-    <span class="size">~2 KB</span>
+    <span class="size">скачать файл</span>
   </a>
 
   <div style="height:6px;"></div>
@@ -288,18 +303,14 @@
     <div class="step-num">3</div>
     <div class="step-body">
       <strong>Импортируйте правила роутинга</strong>
-      <p style="font-size:11px;color:var(--text-dim);margin-top:4px;">
-      <strong>Метод A (рекомендуемый) — из буфера обмена:</strong><br>
-      Откройте любой JSON файл ниже, нажмите «скопировать», затем:<br>
-      v2rayNG → ⋮ (меню слева) → Маршрутизация →<br>
-      ⋮ (три точки сверху) → <strong>Импорт правил из буфера обмена</strong> → OK.
-      </p>
-      <p style="font-size:11px;color:var(--text-dim);margin-top:4px;">
-      <strong>Метод B — из файла:</strong><br>
-      v2rayNG → ⋮ (меню слева) → Маршрутизация →<br>
-      ⋮ (три точки) → <strong>Импорт правил из файла</strong> → выберите в assets/<br>
-      <strong>v2rayng-routing-russia.json</strong> (всё через VPN)
-      или <strong>v2rayng-only-blocked.json</strong> (только заблокированное).
+      <div style="background:rgba(99,102,241,0.1);border:1px solid rgba(99,102,241,0.3);border-radius:8px;padding:8px;margin-top:6px;">
+        🔥 <strong>Достаточно нажать кнопку выше «📋 Copy JSON»</strong>, затем:<br>
+        <span style="font-size:12px;">v2rayNG → <strong>≡</strong> (меню) → Маршрутизация → <strong>⋮</strong> → Импорт из буфера обмена → OK</span>
+      </div>
+      <p style="font-size:11px;color:var(--text-dim);margin-top:6px;">
+      <strong>Альтернатива — из файла:</strong><br>
+      Скачайте файл выше → переместите в assets/ →<br>
+      v2rayNG → Маршрутизация → ⋮ → Импорт правил из файла → выберите файл.
       </p>
     </div>
   </div>
@@ -320,7 +331,11 @@
   <div class="step">
     <div class="step-num">5</div>
     <div class="step-body">
-      <strong>Добавьте подписку</strong> — нажмите <code>+</code> в v2rayNG → «Импорт по URL» → вставьте ссылку из раздела ниже.
+      <strong>Добавьте подписку одним нажатием</strong>
+      <p style="font-size:11px;color:var(--text-dim);margin-top:4px;">
+      Нажмите на ссылку-кнопку ниже → v2rayNG откроется и предложит импорт.<br>
+      Или нажмите <code>+</code> в v2rayNG → Import from URL → вставьте URL.
+      </p>
     </div>
   </div>
 
@@ -355,52 +370,64 @@
 
 <!-- ===== Подписки ===== -->
 <div class="card">
-  <h2>🔗 Подписки</h2>
-  <p style="margin-bottom:10px;">Нажмите на ссылку, чтобы скопировать, затем вставьте в v2rayNG (<code>+</code> → Импорт по URL).</p>
+  <h2>🔗 Подписки — добавить в 1 клик</h2>
+  <p style="margin-bottom:10px;">
+    <strong>Deep link (рекомендуется):</strong> нажмите на кнопку → v2rayNG откроется и предложит импорт.
+    <br><span style="font-size:11px;color:var(--text-dim);">Требуется v2rayNG + Android с поддержкой deep links.</span>
+  </p>
 
-  <details class="url-grid">
+  <details class="url-grid" open>
     <summary><span class="tag tag-black">Чёрные списки</span> Весь трафик через VPN</summary>
+    <button class="btn btn-url" onclick="deepLink(this, 'v2rayng://install-sub/https://raw.githubusercontent.com/igareck/vpn-configs-for-russia/refs/heads/main/BLACK_VLESS_RUS_mobile.txt')">
+      🔗 BLACK_VLESS_RUS_mobile.txt <span style="font-size:10px;opacity:0.6;">(deep link)</span>
+    </button>
     <button class="btn btn-url" onclick="copy(this, 'https://raw.githubusercontent.com/igareck/vpn-configs-for-russia/refs/heads/main/BLACK_VLESS_RUS_mobile.txt')">
-      BLACK_VLESS_RUS_mobile.txt
+      📋 Копировать URL (BLACK_VLESS_RUS_mobile.txt)
     </button>
     <button class="btn btn-url" onclick="copy(this, 'https://raw.githubusercontent.com/igareck/vpn-configs-for-russia/refs/heads/main/BLACK_VLESS_RUS.txt')">
-      BLACK_VLESS_RUS.txt
+      📋 Копировать URL (BLACK_VLESS_RUS.txt)
     </button>
     <button class="btn btn-url" onclick="copy(this, 'https://raw.githubusercontent.com/igareck/vpn-configs-for-russia/refs/heads/main/BLACK_SS+All_RUS.txt')">
-      BLACK_SS+All_RUS.txt
+      📋 Копировать URL (BLACK_SS+All_RUS.txt)
     </button>
   </details>
 
   <details class="url-grid">
     <summary><span class="tag tag-white">Белые списки</span> Только РФ через VPN</summary>
+    <button class="btn btn-url" onclick="deepLink(this, 'v2rayng://install-sub/https://raw.githubusercontent.com/igareck/vpn-configs-for-russia/refs/heads/main/Vless-Reality-White-Lists-Rus-Mobile.txt')">
+      🔗 Vless-Reality-White-Lists-Rus-Mobile.txt <span style="font-size:10px;opacity:0.6;">(deep link)</span>
+    </button>
     <button class="btn btn-url" onclick="copy(this, 'https://raw.githubusercontent.com/igareck/vpn-configs-for-russia/refs/heads/main/Vless-Reality-White-Lists-Rus-Mobile.txt')">
-      Vless-Reality-White-Lists-Rus-Mobile.txt
+      📋 Копировать URL (Vless-Reality-White-Lists-Rus-Mobile.txt)
     </button>
     <button class="btn btn-url" onclick="copy(this, 'https://raw.githubusercontent.com/igareck/vpn-configs-for-russia/refs/heads/main/WHITE-CIDR-RU-all.txt')">
-      WHITE-CIDR-RU-all.txt
+      📋 Копировать URL (WHITE-CIDR-RU-all.txt)
     </button>
     <button class="btn btn-url" onclick="copy(this, 'https://raw.githubusercontent.com/igareck/vpn-configs-for-russia/refs/heads/main/WHITE-SNI-RU-all.txt')">
-      WHITE-SNI-RU-all.txt
+      📋 Копировать URL (WHITE-SNI-RU-all.txt)
     </button>
   </details>
 
   <details class="url-grid">
     <summary><span class="tag tag-wl">zieng2/wl</span> Дополнительно</summary>
+    <button class="btn btn-url" onclick="deepLink(this, 'v2rayng://install-sub/https://raw.githubusercontent.com/zieng2/wl/main/vless_universal.txt')">
+      🔗 vless_universal.txt <span style="font-size:10px;opacity:0.6;">(deep link)</span>
+    </button>
     <button class="btn btn-url" onclick="copy(this, 'https://raw.githubusercontent.com/zieng2/wl/main/vless_universal.txt')">
-      vless_universal.txt
+      📋 Копировать URL
     </button>
   </details>
 
   <details class="url-grid">
     <summary><span class="tag tag-white">hxehex</span> CIDR/IP вайтлист</summary>
     <button class="btn btn-url" onclick="copy(this, 'https://raw.githubusercontent.com/hxehex/russia-mobile-internet-whitelist/main/cidrwhitelist.txt')">
-      cidrwhitelist.txt
+      📋 Копировать URL (cidrwhitelist.txt)
     </button>
     <button class="btn btn-url" onclick="copy(this, 'https://raw.githubusercontent.com/hxehex/russia-mobile-internet-whitelist/main/ipwhitelist.txt')">
-      ipwhitelist.txt
+      📋 Копировать URL (ipwhitelist.txt)
     </button>
     <button class="btn btn-url" onclick="copy(this, 'https://raw.githubusercontent.com/hxehex/russia-mobile-internet-whitelist/main/whitelist.txt')">
-      whitelist.txt (SNI)
+      📋 Копировать URL (whitelist.txt)
     </button>
   </details>
 </div>
@@ -431,25 +458,92 @@
 </div>
 
 <script>
+// Копирование URL в буфер обмена
 function copy(btn, url) {
   if (navigator.clipboard && navigator.clipboard.writeText) {
-    navigator.clipboard.writeText(url).then(() => {
-      btn.classList.add('copied');
-      setTimeout(() => btn.classList.remove('copied'), 2000);
+    navigator.clipboard.writeText(url).then(function() {
+      showCopied(btn);
     });
   } else {
-    // fallback for older browsers
-    var textarea = document.createElement('textarea');
-    textarea.value = url;
-    textarea.style.position = 'fixed';
-    textarea.style.opacity = '0';
-    document.body.appendChild(textarea);
-    textarea.select();
-    document.execCommand('copy');
-    document.body.removeChild(textarea);
-    btn.classList.add('copied');
-    setTimeout(() => btn.classList.remove('copied'), 2000);
+    fallbackCopy(btn, url);
   }
+}
+
+// Копирование JSON-контента из GitHub в буфер обмена
+function copyJSON(btn, filename) {
+  btn.textContent = '⏳ Загрузка...';
+  btn.disabled = true;
+  var url = 'https://raw.githubusercontent.com/ZDarow/V_2_R_A_Y_N/main/config/' + filename;
+  fetch(url)
+    .then(function(resp) {
+      if (!resp.ok) throw new Error('HTTP ' + resp.status);
+      return resp.text();
+    })
+    .then(function(text) {
+      if (navigator.clipboard && navigator.clipboard.writeText) {
+        return navigator.clipboard.writeText(text);
+      } else {
+        return new Promise(function(resolve, reject) {
+          fallbackCopy(btn, text);
+          resolve();
+        });
+      }
+    })
+    .then(function() {
+      showCopied(btn);
+      btn.textContent = '✅ ' + filename + ' скопирован!';
+      btn.disabled = false;
+      setTimeout(function() {
+        btn.innerHTML = '📋 ' + filename + ' <span class="badge badge-green">' + (filename.includes('routing-russia') ? 'всё через прокси' : 'только заблокированное') + '</span> <span class="size">~2 KB</span>';
+      }, 2500);
+    })
+    .catch(function(err) {
+      btn.textContent = '❌ Ошибка: ' + err.message;
+      btn.disabled = false;
+      setTimeout(function() {
+        btn.innerHTML = '📋 ' + filename + ' <span class="badge badge-green">' + (filename.includes('routing-russia') ? 'всё через прокси' : 'только заблокированное') + '</span> <span class="size">~2 KB</span>';
+      }, 3000);
+    });
+}
+
+// Deep link — открывает v2rayNG через URL-схему
+function deepLink(btn, url) {
+  // Пробуем window.location (открывает v2rayNG)
+  var confirmed = confirm('Открыть v2rayNG для импорта подписки?');
+  if (confirmed) {
+    // Сначала копируем URL как fallback
+    var fallbackUrl = url.replace('v2rayng://install-sub/', '');
+    if (navigator.clipboard && navigator.clipboard.writeText) {
+      navigator.clipboard.writeText(fallbackUrl);
+    }
+    // Пробуем deep link
+    var iframe = document.createElement('iframe');
+    iframe.style.display = 'none';
+    iframe.src = url;
+    document.body.appendChild(iframe);
+    setTimeout(function() {
+      document.body.removeChild(iframe);
+      showCopied(btn);
+    }, 500);
+  }
+}
+
+// Вспомогательные функции
+function showCopied(btn) {
+  btn.classList.add('copied');
+  setTimeout(function() { btn.classList.remove('copied'); }, 2500);
+}
+
+function fallbackCopy(btn, text) {
+  var textarea = document.createElement('textarea');
+  textarea.value = text;
+  textarea.style.position = 'fixed';
+  textarea.style.opacity = '0';
+  document.body.appendChild(textarea);
+  textarea.select();
+  document.execCommand('copy');
+  document.body.removeChild(textarea);
+  showCopied(btn);
 }
 </script>
 

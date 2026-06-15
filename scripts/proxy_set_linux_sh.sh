@@ -71,7 +71,7 @@ set_kde_proxy() {
     $KWRITECONFIG --file kioslaverc --group "Proxy Settings" --key ProxyType 1
     $KWRITECONFIG --file kioslaverc --group "Proxy Settings" --key httpProxy "http://$PROXY_IP:$PROXY_PORT"
     $KWRITECONFIG --file kioslaverc --group "Proxy Settings" --key httpsProxy "http://$PROXY_IP:$PROXY_PORT"
-    $KWRITECONFIG --file kioslaverc --group "Proxy Settings" --key socksProxy "http://$PROXY_IP:$PROXY_PORT"
+    $KWRITECONFIG --file kioslaverc --group "Proxy Settings" --key socksProxy "socks://$PROXY_IP:$PROXY_PORT"
 
     $KWRITECONFIG --file kioslaverc --group "Proxy Settings" --key NoProxyFor "$IGNORE_HOSTS"
 

@@ -7,7 +7,7 @@ PROXY_SCRIPT="${BASH_SOURCE[0]%/*}/proxy_set_linux_sh.sh"
 [ ! -f "$PROXY_SCRIPT" ] && PROXY_SCRIPT="$HOME/.local/share/v2rayN/binConfigs/proxy_set_linux_sh.sh"
 [ ! -f "$PROXY_SCRIPT" ] && PROXY_SCRIPT="$HOME/.config/v2rayN/proxy_set_linux_sh.sh"
 
-IGNORE_HOSTS="localhost,127.0.0.0/8,::1,*.local,.local,.ru,.su,.xn--p1ai"
+IGNORE_HOSTS="localhost,127.0.0.0/8,::1,*.local,.ru,.su,.xn--p1ai"
 
 case "${1:-status}" in
   on|enable|manual)

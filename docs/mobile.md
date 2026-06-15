@@ -3,8 +3,13 @@
 ## v2rayNG — Android-клиент
 
 **v2rayNG** (58k ★) — официальный Android-клиент от 2dust, основанный на Xray-core.
-Все конфигурационные файлы из репозитория (`routing-russia.json`, `only_blocked.json`,
-`config-template-xray.json`) полностью совместимы с v2rayNG.
+
+Для v2rayNG поддерживаются **два формата** конфигурационных файлов:
+
+| Формат | Файлы | Как импортировать |
+|--------|-------|-------------------|
+| **JSON array** (рекомендуется) | `v2rayng-routing-russia.json`, `v2rayng-only-blocked.json` | Маршрутизация → ⋮ → Импорт правил из буфера обмена / из файла |
+| **JSON object** | `routing-russia.json`, `only_blocked.json` | Через ПК v2rayN (пользовательский файл роутинга). На телефоне — только если скопировать в assets и использовать как файл |
 
 ### Структура файлов на Android
 
@@ -17,9 +22,11 @@
                 └── assets/           ← Пользовательские файлы
                     ├── geoip.dat
                     ├── geosite.dat
-                    ├── routing-russia.json
-                    ├── only_blocked.json
-                    └── config-template-xray.json
+                    ├── v2rayng-routing-russia.json    ← Рекомендуемый формат
+                    ├── v2rayng-only-blocked.json      ← Рекомендуемый формат
+                    ├── routing-russia.json            ← v2rayN формат (опционально)
+                    ├── only_blocked.json              ← v2rayN формат (опционально)
+                    └── config-template-xray.json      ← только для v2rayN
 ```
 
 ## deploy-mobile.sh — автоматический деплой

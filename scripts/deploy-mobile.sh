@@ -115,7 +115,7 @@ done
 
 # ---- 3. Копирование конфигов ----
 if [ "$RULES_ONLY" = false ]; then
-  for cfg in routing-russia.json only_blocked.json config-template-xray.json; do
+  for cfg in routing-russia.json only_blocked.json config-template-xray.json v2rayng-routing-russia.json v2rayng-only-blocked.json; do
     src="$REPO_DIR/config/$cfg"
     if [ -f "$src" ]; then
       cp "$src" "$ANDROID_DIR/$cfg"
@@ -132,33 +132,43 @@ if [ "$RULES_ONLY" = false ]; then
 
 	📁 Файлы в этой папке:
 	------------------------
-	geoip.dat              — Правила geoip (runetfreedom release)
-	geosite.dat            — Правила geosite (runetfreedom release)
-	routing-russia.json    — Роутинг «Всё через прокси»
-	only_blocked.json      — Роутинг «Только заблокированное»
-	config-template-xray.json — Шаблон Xray-core
+	geoip.dat                          — Правила geoip (runetfreedom release)
+	geosite.dat                        — Правила geosite (runetfreedom release)
+	v2rayng-routing-russia.json        — Роутинг «Всё через прокси» (v2rayNG формат)
+	v2rayng-only-blocked.json          — Роутинг «Только заблокированное» (v2rayNG формат)
+	routing-russia.json                — Роутинг (v2rayN объектный формат, для ПК)
+	only_blocked.json                  — Роутинг (v2rayN объектный формат, для ПК)
+	config-template-xray.json          — Шаблон Xray-core (только для v2rayN)
 
-	📲 Установка:
+	📲 Импорт правил роутинга в v2rayNG:
 	------------------------
-	1. Скопируйте ВСЕ файлы в папку:
-	   Android/data/com.v2ray.ang/files/assets/
-	   (на внутреннем хранилище телефона)
 
-	2. В v2rayNG:
-	   Настройки → Настройки роутинга
-	   → Пользовательский файл роутинга
-	   → Выберите routing-russia.json или only_blocked.json
+	МЕТОД A (рекомендуемый) — из буфера обмена:
+	  1. Откройте файл v2rayng-routing-russia.json или v2rayng-only-blocked.json
+	     в любом текстовом редакторе на телефоне.
+	  2. Выделите и скопируйте ВЕСЬ текст (всё содержимое файла).
+	  3. Откройте v2rayNG → ⋮ (меню слева) → Маршрутизация.
+	  4. Нажмите ⋮ (три точки сверху справа).
+	  5. Выберите «Импорт правил из буфера обмена».
+	  6. Подтвердите удаление существующих правил.
 
-	3. Импортируйте подписки:
-	   Меню + → Импорт из буфера обмена / по URL
-	   (URL подписок см. в README репозитория)
+	МЕТОД B — из файла:
+	  1. Убедитесь, что файлы лежат в папке assets/.
+	  2. v2rayNG → ⋮ (меню слева) → Маршрутизация.
+	  3. ⋮ (три точки) → Импорт правил из файла.
+	  4. Выберите v2rayng-routing-russia.json или v2rayng-only-blocked.json.
 
-	4. Отключите allowInsecure (удалён в v2rayNG 2.2.3):
-	   Настройки подписки → Отпечаток сертификата (включить)
+	ВАЖНО: После импорта смените доменную стратегию!
+	  Маршрутизация → поле «Доменная стратегия» → IPOnDemand
 
-	⚠️ Первый запуск:
-	   Если geoip/geosite не загрузились, поменяйте
-	   файлы вручную через USB/ADB.
+	📲 Импорт подписок (серверов):
+	------------------------
+	  1. v2rayNG → ➕ (плюс) → Импорт по URL
+	  2. Вставьте URL подписки (см. README репозитория)
+	  3. Включите «Отпечаток сертификата» (долгое нажатие → карандаш)
+
+	⚠️ allowInsecure удалён в v2rayNG 2.2.3!
+	   Используйте «Отпечаток сертификата» в настройках подписки.
 
 	Подробнее: https://github.com/ZDarow/V_2_R_A_Y_N
 	ANDROIDEOF

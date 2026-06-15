@@ -86,8 +86,10 @@ fi
 
 # ---- Режимы работы ----
 # Определяем, откуда запущен скрипт: из локального репозитория или из pipe
-if [ -f "${BASH_SOURCE[0]}" ] && [ -f "$(dirname "${BASH_SOURCE[0]}")/config/routing-russia.json" ]; then
-  SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+# Используем ${BASH_SOURCE[0]:-$0} для защиты от pipe и set -u
+SCRIPT_PATH="$(realpath "${BASH_SOURCE[0]:-$0}" 2>/dev/null || readlink -f "${BASH_SOURCE[0]:-$0}" 2>/dev/null || echo "${BASH_SOURCE[0]:-$0}")"
+if [ -n "$SCRIPT_PATH" ] && [ -f "$(dirname "$SCRIPT_PATH")/config/routing-russia.json" ] 2>/dev/null; then
+  SCRIPT_DIR="$(cd "$(dirname "$SCRIPT_PATH")" && pwd)"
   LOCAL_MODE=true
   info "Локальный режим: конфиги найдены в $SCRIPT_DIR"
 else
@@ -134,10 +136,28 @@ fi
 if [ "$DOTNET_INSTALLED" = false ]; then
   if command -v apt-get &>/dev/null; then
     info "Установка dotnet-runtime-10.0 (требуется для v2rayN 7.22+)..."
-    if sudo apt-get install -y -qq dotnet-runtime-10.0; then
+    # Пробуем установить напрямую; если не находит — добавляем Microsoft репозиторий
+    if sudo apt-get install -y -qq dotnet-runtime-10.0 2>/dev/null; then
       info ".NET 10.0 успешно установлен"
     else
-      warn "Пакет dotnet-runtime-10.0 недоступен. Установите вручную: https://dotnet.microsoft.com/download"
+      warn "Пакет dotnet-runtime-10.0 не найден в стандартных репозиториях."
+      info "Добавляю Microsoft package repository..."
+      MS_PKG="packages-microsoft-prod.deb"
+      wget -q "https://packages.microsoft.com/config/ubuntu/$(lsb_release -rs 2>/dev/null || echo '24.04')/$MS_PKG" -O "/tmp/$MS_PKG" 2>/dev/null || true
+      if [ -f "/tmp/$MS_PKG" ] && [ -s "/tmp/$MS_PKG" ]; then
+        sudo dpkg -i "/tmp/$MS_PKG" 2>/dev/null || true
+        rm -f "/tmp/$MS_PKG"
+        sudo apt-get update -qq 2>/dev/null || true
+        if sudo apt-get install -y -qq dotnet-runtime-10.0; then
+          info ".NET 10.0 успешно установлен после добавления Microsoft репозитория"
+        else
+          warn "Microsoft репозиторий добавлен, но dotnet-runtime-10.0 всё ещё недоступен."
+          warn "Установите вручную: https://dotnet.microsoft.com/download"
+        fi
+      else
+        warn "Не удалось загрузить Microsoft repository package."
+        warn "Установите .NET 10.0 вручную: https://dotnet.microsoft.com/download"
+      fi
     fi
   else
     warn "Установите .NET Runtime 10.0+ вручную: https://dotnet.microsoft.com/download"
@@ -153,8 +173,8 @@ if [ "$SKIP_V2RAYN" = false ]; then
     # Пробуем GitHub API, затем fallback на прямой URL
     LATEST=""
     if command -v curl &>/dev/null; then
-      LATEST=$(curl -sSL --connect-timeout 10 https://api.github.com/repos/2dust/v2rayN/releases/latest 2>/dev/null \
-        | grep "browser_download_url.*linux-${DEB_ARCH}\.deb" | head -1 | cut -d'"' -f4 || true)
+    LATEST=$(curl -sSL --connect-timeout 10 https://api.github.com/repos/2dust/v2rayN/releases/latest 2>/dev/null \
+      | grep "browser_download_url.*linux-${DEB_ARCH}\.deb\"" | head -1 | cut -d'"' -f4 || true)
     fi
     if [ -z "$LATEST" ]; then
       LATEST="https://github.com/2dust/v2rayN/releases/latest/download/v2rayN-linux-${DEB_ARCH}.deb"
@@ -222,18 +242,24 @@ fi
 
 # ---- 6. Конфигурация роутинга и Xray ----
 header "Установка конфигурации"
-if [ -f "$SCRIPT_DIR/config/routing-russia.json" ]; then
-  cp -f "$SCRIPT_DIR/config/routing-russia.json" "$V2RAYN_CONFIG_DIR/routing-russia.json"
-  info "routing-russia.json установлен"
-fi
-if [ -f "$SCRIPT_DIR/config/config-template-xray.json" ]; then
-  cp -f "$SCRIPT_DIR/config/config-template-xray.json" "$V2RAYN_BINCONFIG_DIR/config-template-xray.json"
-  info "config-template-xray.json установлен"
-fi
-if [ -f "$SCRIPT_DIR/config/only_blocked.json" ]; then
-  cp -f "$SCRIPT_DIR/config/only_blocked.json" "$V2RAYN_CONFIG_DIR/only_blocked.json"
-  info "only_blocked.json установлен (мобильный режим)"
-fi
+
+# Функция копирования с проверкой
+copy_config() {
+  local src="$1" dest="$2" label="$3"
+  if [ -f "$src" ]; then
+    mkdir -p "$(dirname "$dest")"
+    cp -f "$src" "$dest"
+    info "$label: установлен"
+  else
+    warn "$label: файл $src не найден, пропущен"
+  fi
+}
+
+copy_config "$SCRIPT_DIR/config/routing-russia.json" "$V2RAYN_CONFIG_DIR/routing-russia.json" "routing-russia.json"
+copy_config "$SCRIPT_DIR/config/config-template-xray.json" "$V2RAYN_BINCONFIG_DIR/config-template-xray.json" "config-template-xray.json"
+copy_config "$SCRIPT_DIR/config/only_blocked.json" "$V2RAYN_CONFIG_DIR/only_blocked.json" "only_blocked.json (мобильный режим)"
+copy_config "$SCRIPT_DIR/config/v2rayng-routing-russia.json" "$V2RAYN_CONFIG_DIR/v2rayng-routing-russia.json" "v2rayng-routing-russia.json (v2rayNG формат)"
+copy_config "$SCRIPT_DIR/config/v2rayng-only-blocked.json" "$V2RAYN_CONFIG_DIR/v2rayng-only-blocked.json" "v2rayng-only-blocked.json (v2rayNG формат)"
 # Предупреждение о allowInsecure
 info "⚠️  ВНИМАНИЕ: Xray отключит параметр allowInsecure с 1 августа 2026."
 info "   Используйте verifyPeerCertByName в настройках подписки v2rayN."
@@ -320,7 +346,7 @@ elif command -v kwriteconfig6 &>/dev/null || command -v kwriteconfig5 &>/dev/nul
   "$KWC" --file kioslaverc --group "Proxy Settings" --key ProxyType 1 2>/dev/null || true
   "$KWC" --file kioslaverc --group "Proxy Settings" --key httpProxy "http://127.0.0.1:10809" 2>/dev/null || true
   "$KWC" --file kioslaverc --group "Proxy Settings" --key httpsProxy "http://127.0.0.1:10809" 2>/dev/null || true
-  "$KWC" --file kioslaverc --group "Proxy Settings" --key socksProxy "http://127.0.0.1:10808" 2>/dev/null || true
+  "$KWC" --file kioslaverc --group "Proxy Settings" --key socksProxy "socks://127.0.0.1:10808" 2>/dev/null || true
   "$KWC" --file kioslaverc --group "Proxy Settings" --key NoProxyFor "localhost,127.0.0.0/8,::1,*.local,.ru,.su,.xn--p1ai" 2>/dev/null || true
   dbus-send --type=signal /KIO/Scheduler org.kde.KIO.Scheduler.reparseSlaveConfiguration string:"" 2>/dev/null || true
   info "Системный прокси настроен (KDE Plasma)"

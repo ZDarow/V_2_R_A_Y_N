@@ -205,6 +205,10 @@
 
 <h1>📱 v2rayNG</h1>
 <p class="subtitle">Настройка для РФ — загрузка конфигов с телефона</p>
+<p class="subtitle" style="font-size:12px;margin-top:-16px;margin-bottom:20px;">
+  Формат: <a href="#rules-format" style="color:#6366f1;">v2rayNG Discussion #4761</a>
+  · <a href="https://cdn.jsdelivr.net/gh/ZDarow/V_2_R_A_Y_N@main/deploy/index.html" style="color:#f59e0b;">CDN зеркало</a>
+</p>
 
 <!-- ===== Файлы ===== -->
 <div class="card">
@@ -224,6 +228,24 @@
   <a class="btn btn-dat" href="https://raw.githubusercontent.com/ZDarow/V_2_R_A_Y_N/main/config/only_blocked.json" download="only_blocked.json">
     only_blocked.json
     <span class="badge badge-green">мобильный</span>
+    <span class="size">~2 KB</span>
+  </a>
+
+  <div style="height:6px;"></div>
+
+  <div style="margin:12px 0 8px;font-size:12px;color:var(--text-dim);border-top:1px solid rgba(255,255,255,0.06);padding-top:10px;">
+    📋 Правила роутинга для v2rayNG:
+  </div>
+
+  <a class="btn btn-dat" href="https://raw.githubusercontent.com/ZDarow/V_2_R_A_Y_N/main/config/v2rayng-routing-russia.json" download="v2rayng-routing-russia.json">
+    v2rayng-routing-russia.json
+    <span class="badge badge-green">всё через прокси</span>
+    <span class="size">~2 KB</span>
+  </a>
+
+  <a class="btn btn-dat" href="https://raw.githubusercontent.com/ZDarow/V_2_R_A_Y_N/main/config/v2rayng-only-blocked.json" download="v2rayng-only-blocked.json">
+    v2rayng-only-blocked.json
+    <span class="badge badge-green">только заблокированное</span>
     <span class="size">~2 KB</span>
   </a>
 
@@ -256,7 +278,7 @@
   <div class="step">
     <div class="step-num">2</div>
     <div class="step-body">
-      <strong>Перенесите</strong> скачанные файлы в папку<br>
+      <strong>Перенесите</strong> файлы в папку<br>
       <code style="font-size:11px;word-break:break-all;">Android/data/com.v2ray.ang/files/assets/</code><br>
       (через любой файловый менеджер — Google Files, CX File Explorer и т.п.)
     </div>
@@ -265,27 +287,70 @@
   <div class="step">
     <div class="step-num">3</div>
     <div class="step-body">
-      <strong>Откройте v2rayNG</strong> → Настройки → Настройки роутинга →<br>
-      включите «Пользовательский файл роутинга» → выберите
-      <strong>routing-russia.json</strong> (всё через VPN)
-      или <strong>only_blocked.json</strong> (только заблокированное).
+      <strong>Импортируйте правила роутинга</strong>
+      <p style="font-size:11px;color:var(--text-dim);margin-top:4px;">
+      <strong>Метод A (рекомендуемый) — из буфера обмена:</strong><br>
+      Откройте любой JSON файл ниже, нажмите «скопировать», затем:<br>
+      v2rayNG → ⋮ (меню слева) → Маршрутизация →<br>
+      ⋮ (три точки сверху) → <strong>Импорт правил из буфера обмена</strong> → OK.
+      </p>
+      <p style="font-size:11px;color:var(--text-dim);margin-top:4px;">
+      <strong>Метод B — из файла:</strong><br>
+      v2rayNG → ⋮ (меню слева) → Маршрутизация →<br>
+      ⋮ (три точки) → <strong>Импорт правил из файла</strong> → выберите в assets/<br>
+      <strong>v2rayng-routing-russia.json</strong> (всё через VPN)
+      или <strong>v2rayng-only-blocked.json</strong> (только заблокированное).
+      </p>
     </div>
   </div>
 
   <div class="step">
     <div class="step-num">4</div>
     <div class="step-body">
-      <strong>Добавьте подписку</strong> — нажмите <code>+</code> в v2rayNG → «Импорт по URL» → вставьте ссылку из раздела ниже.
+      <strong>Смените доменную стратегию на IPOnDemand</strong><br>
+      <span style="font-size:12px;color:var(--orange);">(ВАЖНО! Без этого geoip:ru может не работать)</span><br>
+      <span style="font-size:12px;color:var(--text-dim);">
+      Маршрутизация → поле «Доменная стратегия» → выберите
+      <strong>IPOnDemand</strong> (рекомендуется) или <strong>IPIfNonMatch</strong>.
+      Не используйте «AsIs» — он отключает geoip.
+      </span>
     </div>
   </div>
 
   <div class="step">
     <div class="step-num">5</div>
     <div class="step-body">
+      <strong>Добавьте подписку</strong> — нажмите <code>+</code> в v2rayNG → «Импорт по URL» → вставьте ссылку из раздела ниже.
+    </div>
+  </div>
+
+  <div class="step">
+    <div class="step-num">6</div>
+    <div class="step-body">
       <strong>Включите отпечаток сертификата</strong> в настройках подписки (долгое нажатие → карандаш → «Отпечаток сертификата»).
       <span class="badge badge-red">allowInsecure удалён!</span>
     </div>
   </div>
+</div>
+
+<!-- ===== Правила роутинга ===== -->
+<div class="card" id="rules-format">
+  <h2>📋 Формат правил</h2>
+  <p style="font-size:12px;margin-bottom:8px;">
+    Формат правил основан на обсуждении
+    <a href="https://github.com/2dust/v2rayNG/discussions/4761" style="color:#6366f1;">
+    v2rayNG Discussion #4761</a> (29 комментариев).
+  </p>
+  <p style="font-size:12px;color:var(--text-dim);margin-bottom:8px;">
+    Поддерживаемые поля: <code>domain</code>, <code>ip</code>, <code>protocol</code>,
+    <code>network</code>, <code>port</code>, <code>outboundTag</code>,
+    <code>enabled</code>, <code>remarks</code>, <code>looked</code>.
+  </p>
+  <p style="font-size:12px;color:var(--text-dim);">
+    Импорт через буфер обмена или файл — единственный поддерживаемый способ
+    (deep link <code>v2rayng://routing-rules</code> не реализован,
+    <a href="https://github.com/2dust/v2rayNG/issues/4280" style="color:#6366f1;">отклонён разработчиком</a>).
+  </p>
 </div>
 
 <!-- ===== Подписки ===== -->

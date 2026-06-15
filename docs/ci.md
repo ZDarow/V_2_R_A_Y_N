@@ -29,6 +29,8 @@
 - `scripts/proxy-toggle.sh`
 - `scripts/proxy_set_linux_sh.sh`
 - `scripts/deploy-mobile.sh`
+- `scripts/generate-mobile-url.sh`
+- `scripts/mobile-setup-termux.sh`
 
 **Уровень:** `warning` (ошибки и предупреждения).
 
@@ -37,7 +39,12 @@
 Проверка синтаксиса всех shell-скриптов через `bash -n`.
 
 ```bash
-for f in install.sh uninstall.sh scripts/*.sh; do
+for f in \
+  install.sh uninstall.sh \
+  scripts/update-rules.sh scripts/proxy-toggle.sh \
+  scripts/proxy_set_linux_sh.sh scripts/deploy-mobile.sh \
+  scripts/generate-mobile-url.sh scripts/mobile-setup-termux.sh
+do
   bash -n "$f" || errors=$((errors+1))
 done
 ```
@@ -57,17 +64,24 @@ for f in config/*.json; do
 done
 ```
 
-**Проверяемые файлы:**
+**Проверяемые файлы:** все `config/*.json`:
 - `config/routing-russia.json`
 - `config/config-template-xray.json`
 - `config/only_blocked.json`
+- `config/v2rayng-routing-russia.json`
+- `config/v2rayng-only-blocked.json`
 
 ### 4. Markdown Check (`markdown-check`)
 
 Проверка наличия и, по возможности, линтинг Markdown-файлов.
 
 ```bash
-for f in README.md subscriptions/README.md; do
+for f in \
+  README.md CHANGELOG.md \
+  docs/README.md docs/install.md docs/mobile.md \
+  docs/routing.md docs/scripts.md docs/ci.md docs/faq.md \
+  subscriptions/README.md
+do
   # проверка существования
   # markdownlint (если установлен)
 done

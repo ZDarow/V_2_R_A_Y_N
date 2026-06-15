@@ -1,0 +1,87 @@
+[
+  {
+    "domain": ["geosite:category-ads-all"],
+    "enabled": true,
+    "looked": false,
+    "outboundTag": "block",
+    "remarks": "Блокировка рекламы"
+  },
+  {
+    "domain": ["geosite:ru-blocked"],
+    "enabled": true,
+    "looked": false,
+    "outboundTag": "proxy",
+    "remarks": "Заблокированные домены РФ в прокси"
+  },
+  {
+    "ip": ["geoip:ru-blocked"],
+    "enabled": true,
+    "looked": false,
+    "outboundTag": "proxy",
+    "remarks": "Заблокированные IP РФ в прокси"
+  },
+  {
+    "ip": ["1.0.0.1", "1.1.1.1", "8.8.8.8", "8.8.4.4"],
+    "enabled": true,
+    "looked": false,
+    "outboundTag": "proxy",
+    "remarks": "DNS-серверы через прокси"
+  },
+  {
+    "network": "udp",
+    "port": "50000-65535",
+    "enabled": true,
+    "looked": false,
+    "outboundTag": "proxy",
+    "remarks": "Discord VoIP через прокси"
+  },
+  {
+    "protocol": ["bittorrent"],
+    "enabled": true,
+    "looked": false,
+    "outboundTag": "direct",
+    "remarks": "BitTorrent напрямую"
+  },
+  {
+    "ip": ["geoip:ru"],
+    "enabled": true,
+    "looked": false,
+    "outboundTag": "direct",
+    "remarks": "Российские IP напрямую"
+  },
+  {
+    "domain": ["domain:ru", "domain:su", "domain:xn--p1ai", "geosite:ru-available-only-inside"],
+    "enabled": true,
+    "looked": false,
+    "outboundTag": "direct",
+    "remarks": "Российские домены напрямую"
+  },
+  {
+    "ip": ["geoip:ru-whitelist"],
+    "enabled": true,
+    "looked": false,
+    "outboundTag": "direct",
+    "remarks": "CIDR вайтлист (hxehex)"
+  },
+  {
+    "ip": ["geoip:private"],
+    "enabled": true,
+    "looked": false,
+    "outboundTag": "direct",
+    "remarks": "Приватные сети напрямую"
+  },
+  {
+    "domain": ["geosite:private"],
+    "enabled": true,
+    "looked": false,
+    "outboundTag": "direct",
+    "remarks": "Приватные домены напрямую"
+  },
+  {
+    "network": "tcp,udp",
+    "enabled": true,
+    "looked": false,
+    "outboundTag": "direct",
+    "remarks": "Всё остальное напрямую"
+  }
+]

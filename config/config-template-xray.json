@@ -1,5 +1,5 @@
 {
-  "_warning": "⚠️ Xray-core ОТКЛЮЧАЕТ allowInsecure 1 августа 2026 (осталось 45 дней). Замените на verifyPeerCertByName или pinnedPeerCertSha256 в настройках подписки v2rayN.",
+  "_warning": "⚠️ Xray-core ОТКЛЮЧАЕТ allowInsecure с 1 августа 2026. Замените на verifyPeerCertByName или pinnedPeerCertSha256 в настройках подписки v2rayN.",
   "policy": {
     "levels": {
       "0": {

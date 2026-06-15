@@ -1,11 +1,65 @@
 # Правила роутинга
 
-В проекте два конфигурационных файла роутинга для разных сценариев использования:
+## Форматы файлов
 
-| Файл | Сценарий | Дефолтный outbound |
-|------|----------|-------------------|
-| `routing-russia.json` | Домашний WiFi, ПК | proxy |
-| `only_blocked.json` | Мобильный интернет РФ | direct |
+В проекте правила роутинга представлены в **двух форматах**, каждый для своей платформы:
+
+| Формат | Файлы | v2rayN | v2rayNG |
+|--------|-------|--------|---------|
+| **JSON object** | `routing-russia.json`, `only_blocked.json` | Пользовательский файл роутинга (Настройки → Настройки маршрутизации) | — |
+| **JSON array** | `v2rayng-routing-russia.json`, `v2rayng-only-blocked.json` | Встроенный редактор правил (Маршрутизация → Правила → ⋮ → Импорт из файла) | Импорт правил из файла/буфера (Маршрутизация → ⋮ → Импорт правил из буфера обмена) |
+
+**JSON object** — содержит `domainStrategy`, `domainMatcher` и `rules` (массив). Используется v2rayN как отдельный файл пользовательской маршрутизации.
+
+**JSON array** — массив объектов с полями `domain`, `ip`, `protocol`, `network`, `port`,
+`outboundTag`, `enabled`, `looked`, `remarks`. Формат соответствует обсуждению
+[v2rayNG Discussion #4761](https://github.com/2dust/v2rayNG/discussions/4761).
+Используется как v2rayNG (импорт из буфера обмена или файла), так и встроенным
+редактором правил v2rayN.
+
+### Поля JSON array
+
+| Поле | Тип | Обязательное | Описание |
+|------|-----|-------------|----------|
+| `domain` | string[] | нет | Доменные правила (geosite:, domain:, regexp:, full:) |
+| `ip` | string[] | нет | IP-правила (geoip:, CIDR, отдельные IP) |
+| `protocol` | string[] | нет | Протоколы (bittorrent) |
+| `network` | string | нет | Тип сети (tcp, udp, tcp,udp) |
+| `port` | string | нет | Порт или диапазон (0-65535, 443, 50000-65535) |
+| `outboundTag` | string | **да** | Куда направлять (proxy/direct/block) |
+| `enabled` | bool | **да** | Включено ли правило |
+| `looked` | bool | нет | Внутренний флаг v2rayNG (рекомендуется false) |
+| `remarks` | string | **да** | Описание правила |
+
+**Источник формата:** [v2rayN Wiki — Description of custom routing rules](https://github.com/2dust/v2rayN/wiki/Description-of-custom-routing-rules)
+и [v2rayNG Discussion #4761](https://github.com/2dust/v2rayNG/discussions/4761) (подтверждение поля `looked`).
+
+### Способы импорта в v2rayNG
+
+1. **Из буфера обмена (рекомендуется):** Откройте JSON в браузере → копировать всё
+   → v2rayNG → Маршрутизация → ⋮ → Импорт правил из буфера обмена
+2. **Из файла:** Скачайте JSON → переместите в `assets/` → Маршрутизация → ⋮ → Импорт правил из файла
+3. **Deep link:** НЕ поддерживается (issue [#4280](https://github.com/2dust/v2rayNG/issues/4280) — «Not planned»)
+
+### Доменная стратегия
+
+После импорта правил обязательно смените доменную стратегию:
+
+- **IPOnDemand (рекомендуется):** Запрашивать DNS только для доменов, которые
+  реально используются. Наиболее эффективно для мобильных устройств.
+- **IPIfNonMatch:** Разрешать домены в IP, если не нашлось доменного правила.
+- **AsIs:** Не использовать geoip (отключает правила с `geoip:ru` и `geoip:ru-blocked`).
+
+Настройка: v2rayNG → Маршрутизация → поле «Доменная стратегия».
+
+## Сценарии использования
+
+Два режима маршрутизации для разных сценариев:
+
+| Файл (object) | Файл (array) | Сценарий | Дефолтный outbound |
+|---------------|-------------|----------|-------------------|
+| `routing-russia.json` | `v2rayng-routing-russia.json` | Домашний WiFi, ПК | proxy |
+| `only_blocked.json` | `v2rayng-only-blocked.json` | Мобильный интернет РФ | direct |
 
 ## routing-russia.json — «Всё через прокси»
 

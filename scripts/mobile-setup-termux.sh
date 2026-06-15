@@ -86,7 +86,23 @@ fi
 download_file() {
   local url="$1" dest="$2"
   local tmp_dest="${dest}.tmp"
-  curl -sSL --connect-timeout 15 -o "$tmp_dest" "$url" && mv "$tmp_dest" "$dest" && return 0
+  local max_retries="${3:-3}"
+  local delay="${4:-2}"
+  local attempt=0
+
+  while [ "$attempt" -lt "$max_retries" ]; do
+    attempt=$((attempt + 1))
+    if curl -sSL --connect-timeout 20 -o "$tmp_dest" "$url" 2>/dev/null; then
+      mv "$tmp_dest" "$dest"
+      return 0
+    fi
+    rm -f "$tmp_dest"
+    if [ "$attempt" -lt "$max_retries" ]; then
+      echo "    Попытка $attempt/$max_retries не удалась. Повтор через ${delay}с..."
+      sleep "$delay"
+      delay=$((delay * 2))
+    fi
+  done
   return 1
 }
 
@@ -114,6 +130,11 @@ for f in geoip.dat geosite.dat; do
   if [ ! -f "$TEMP_DIR/assets/$f" ] || [ ! -s "$TEMP_DIR/assets/$f" ]; then
     warn "  $f: пуст или отсутствует"
     rm -f "$TEMP_DIR/assets/$f"
+    # Offline fallback: пробуем скопировать существующий файл из assets
+    if [ -f "$V2RAYNG_ASSETS/$f" ] && [ -s "$V2RAYNG_ASSETS/$f" ]; then
+      cp -f "$V2RAYNG_ASSETS/$f" "$TEMP_DIR/assets/$f"
+      info "  $f: восстановлен из существующего файла в assets/"
+    fi
   fi
 done
 
@@ -127,6 +148,11 @@ for rule_file in v2rayng-routing-russia.json v2rayng-only-blocked.json; do
     info "  $rule_file: загружен"
   else
     warn "  $rule_file: не удалось загрузить"
+    # Offline fallback
+    if [ -f "$V2RAYNG_ASSETS/$rule_file" ] && [ -s "$V2RAYNG_ASSETS/$rule_file" ]; then
+      cp -f "$V2RAYNG_ASSETS/$rule_file" "$TEMP_DIR/assets/$rule_file"
+      info "  $rule_file: восстановлен из assets/"
+    fi
   fi
 done
 

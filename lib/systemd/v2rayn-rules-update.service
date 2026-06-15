@@ -1,0 +1,16 @@
+[Unit]
+Description=v2rayN Russia — обновление geoip/geosite правил
+Documentation=https://github.com/ZDarow/V_2_R_A_Y_N
+Wants=network-online.target
+After=network-online.target
+
+[Service]
+Type=oneshot
+ExecStart=%h/.local/share/v2rayN/bin/update-rules.sh
+StandardOutput=journal
+StandardError=journal
+PrivateTmp=true
+NoNewPrivileges=true
+
+[Install]
+WantedBy=default.target

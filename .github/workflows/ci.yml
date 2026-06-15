@@ -21,12 +21,14 @@ jobs:
           additional_files: |
             install.sh
             uninstall.sh
+            lib/common.sh
             scripts/update-rules.sh
             scripts/proxy-toggle.sh
             scripts/proxy_set_linux_sh.sh
             scripts/deploy-mobile.sh
             scripts/generate-mobile-url.sh
             scripts/mobile-setup-termux.sh
+            scripts/mobile-apply-routing.sh
 
   bash-syntax:
     name: Bash Syntax
@@ -38,9 +40,11 @@ jobs:
           errors=0
           for f in \
             install.sh uninstall.sh \
+            lib/common.sh \
             scripts/update-rules.sh scripts/proxy-toggle.sh \
             scripts/proxy_set_linux_sh.sh scripts/deploy-mobile.sh \
-            scripts/generate-mobile-url.sh scripts/mobile-setup-termux.sh
+            scripts/generate-mobile-url.sh scripts/mobile-setup-termux.sh \
+            scripts/mobile-apply-routing.sh
           do
             if [ -f "$f" ]; then
               echo "Checking $f..."

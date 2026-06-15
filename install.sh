@@ -11,13 +11,6 @@ set -euo pipefail
 REPO_URL="${REPO_URL:-https://github.com/ZDarow/V_2_R_A_Y_N.git}"
 RULES_RELEASE_URL="https://raw.githubusercontent.com/runetfreedom/russia-v2ray-rules-dat/release"
 
-# ---- Цвета и утилиты ----
-RED='\033[0;31m'; GREEN='\033[0;32m'; YELLOW='\033[1;33m'; CYAN='\033[0;36m'; NC='\033[0m'
-info()  { echo -e "${GREEN}[✓]${NC} $1"; }
-warn()  { echo -e "${YELLOW}[!]${NC} $1"; }
-error() { echo -e "${RED}[✗]${NC} $1"; exit 1; }
-header(){ echo -e "\n${CYAN}━━━ $1 ━━━${NC}"; }
-
 # ---- trap для очистки временных файлов ----
 CLONE_DIR=""
 cleanup() {
@@ -27,19 +20,45 @@ cleanup() {
 }
 trap cleanup EXIT
 
-# ---- Вспомогательные функции ----
-download_file() {
-  local url="$1"
-  local dest="$2"
-  local tmp_dest="${dest}.tmp"
-  if command -v curl &>/dev/null; then
-    curl -sSL --connect-timeout 15 -o "$tmp_dest" "$url" && mv "$tmp_dest" "$dest" && return 0
-  fi
-  if command -v wget &>/dev/null; then
-    wget -q --timeout=15 -O "$tmp_dest" "$url" && mv "$tmp_dest" "$dest" && return 0
-  fi
-  return 1
-}
+# ---- Подключаем общую библиотеку локально (только если есть) ----
+SCRIPT_PATH="$(realpath "${BASH_SOURCE[0]:-$0}" 2>/dev/null || readlink -f "${BASH_SOURCE[0]:-$0}" 2>/dev/null || echo "${BASH_SOURCE[0]:-$0}")"
+SCRIPT_DIR_INSTALLER=""
+if [ -n "$SCRIPT_PATH" ] && [ -f "$(dirname "$SCRIPT_PATH")/config/routing-russia.json" ] 2>/dev/null; then
+  SCRIPT_DIR_INSTALLER="$(cd "$(dirname "$SCRIPT_PATH")" && pwd)"
+fi
+
+LIB_SHARED=""
+if [ -n "$SCRIPT_DIR_INSTALLER" ] && [ -f "$SCRIPT_DIR_INSTALLER/lib/common.sh" ]; then
+  LIB_SHARED="$SCRIPT_DIR_INSTALLER/lib/common.sh"
+  source "$LIB_SHARED"
+elif [ -f "./lib/common.sh" ]; then
+  LIB_SHARED="./lib/common.sh"
+  source "$LIB_SHARED"
+fi
+
+# Если библиотека не загружена — минимальные fallback функции
+if ! declare -f download_with_retry &>/dev/null; then
+  RED='\033[0;31m'; GREEN='\033[0;32m'; YELLOW='\033[1;33m'; CYAN='\033[0;36m'; NC='\033[0m'
+  info()  { echo -e "${GREEN}[✓]${NC} $1"; }
+  warn()  { echo -e "${YELLOW}[!]${NC} $1"; }
+  error() { echo -e "${RED}[✗]${NC} $1"; exit 1; }
+  header(){ echo -e "\n${CYAN}━━━ $1 ━━━${NC}"; }
+  download_with_retry() {
+    local url="$1" dest="$2" i=0 max=3 delay=2
+    while [ "$i" -lt "$max" ]; do
+      i=$((i+1))
+      if command -v curl &>/dev/null; then curl -sSL --connect-timeout 15 -o "$dest.tmp" "$url" && mv "$dest.tmp" "$dest" && return 0
+      elif command -v wget &>/dev/null; then wget -q --timeout=15 -O "$dest.tmp" "$url" && mv "$dest.tmp" "$dest" && return 0
+      fi
+      [ "$i" -lt "$max" ] && sleep "$delay" && delay=$((delay*2))
+    done
+    return 1
+  }
+  validate_dat() { [ -f "$1" ] && [ -s "$1" ]; }
+  verify_sha256() { return 2; }
+  acquire_lock() { return 0; }
+  release_lock() { return 0; }
+fi
 
 # ---- Парсинг аргументов ----
 FORCE_REINSTALL=false
@@ -224,20 +243,57 @@ mkdir -p "$V2RAYN_CONFIG_DIR" "$V2RAYN_BIN_DIR" "$V2RAYN_BINCONFIG_DIR" "$V2RAYN
 # ---- 5. Правила роутинга (geoip/geosite) ----
 header "Установка правил geoip/geosite"
 
-validate_dat() {
-  local f="$1"
-  [ -f "$f" ] && [ -s "$f" ]
+info "Загрузка правил из runetfreedom (ветка release) ..."
+
+CACHE_DIR="$HOME/.cache/v2rayN/rules"
+mkdir -p "$CACHE_DIR"
+
+install_rule_file() {
+  local name="$1"
+  local url="$RULES_RELEASE_URL/$name"
+  local sha_url="${url}.sha256"
+  local dest="$V2RAYN_BIN_DIR/$name"
+  local cache="$CACHE_DIR/$name"
+  local tmp_file="/tmp/${name}.$$"
+
+  if download_with_retry "$url" "$tmp_file" 3 2; then
+    # SHA256 проверка
+    local sha_ok=2
+    if declare -f verify_sha256 &>/dev/null; then
+      verify_sha256 "$tmp_file" "$sha_url" && sha_ok=0 || sha_ok=$?
+    fi
+
+    if [ "$sha_ok" -eq 0 ] || [ "$sha_ok" -eq 2 ]; then
+      # SHA256 OK или нет checksum файла — устанавливаем
+      cp -f "$tmp_file" "$cache"
+      mv -f "$tmp_file" "$dest"
+      info "$name: установлен ($(ls -lh "$dest" | awk '{print $5}'))"
+      return 0
+    else
+      warn "$name: SHA256 не совпал. Пробую кэш."
+      rm -f "$tmp_file"
+    fi
+  else
+    warn "$name: не удалось скачать. Пробую кэш."
+    rm -f "$tmp_file"
+  fi
+
+  # Fallback: кэш
+  if [ -f "$cache" ] && validate_dat "$cache"; then
+    cp -f "$cache" "$dest"
+    info "$name: восстановлен из кэша"
+    return 0
+  fi
+
+  warn "$name: не установлен (ни загрузка, ни кэш)"
+  return 1
 }
 
-info "Загрузка правил из runetfreedom (ветка release)..."
-download_file "$RULES_RELEASE_URL/geoip.dat" "$V2RAYN_BIN_DIR/geoip.dat" && \
-  validate_dat "$V2RAYN_BIN_DIR/geoip.dat" || \
-  { rm -f "$V2RAYN_BIN_DIR/geoip.dat"; warn "Не удалось загрузить geoip.dat"; }
-download_file "$RULES_RELEASE_URL/geosite.dat" "$V2RAYN_BIN_DIR/geosite.dat" && \
-  validate_dat "$V2RAYN_BIN_DIR/geosite.dat" || \
-  { rm -f "$V2RAYN_BIN_DIR/geosite.dat"; warn "Не удалось загрузить geosite.dat"; }
+install_rule_file "geoip.dat"
+install_rule_file "geosite.dat"
+
 if validate_dat "$V2RAYN_BIN_DIR/geoip.dat" && validate_dat "$V2RAYN_BIN_DIR/geosite.dat"; then
-  info "Правила geoip/geosite установлены (ветка release)"
+  info "Правила geoip/geosite: OK"
 fi
 
 # ---- 6. Конфигурация роутинга и Xray ----
@@ -264,17 +320,50 @@ copy_config "$SCRIPT_DIR/config/v2rayng-only-blocked.json" "$V2RAYN_CONFIG_DIR/v
 info "⚠️  ВНИМАНИЕ: Xray отключит параметр allowInsecure с 1 августа 2026."
 info "   Используйте verifyPeerCertByName в настройках подписки v2rayN."
 
-# ---- 7. Скрипты управления ----
+# ---- 7. Скрипты управления + авто-обновление ----
 header "Установка скриптов управления"
-if [ -f "$SCRIPT_DIR/scripts/proxy-toggle.sh" ]; then
-  cp -f "$SCRIPT_DIR/scripts/proxy-toggle.sh" "$V2RAYN_CONFIG_DIR/proxy-toggle.sh"
-  chmod +x "$V2RAYN_CONFIG_DIR/proxy-toggle.sh"
+V2RAYN_SCRIPTS_DIR="$HOME/.local/share/v2rayN/scripts"
+mkdir -p "$V2RAYN_SCRIPTS_DIR"
+
+# Утилитарные скрипты
+for script in proxy-toggle.sh proxy_set_linux_sh.sh update-rules.sh; do
+  local_src="$SCRIPT_DIR/scripts/$script"
+  if [ -f "$local_src" ]; then
+    cp -f "$local_src" "$V2RAYN_SCRIPTS_DIR/$script"
+    chmod +x "$V2RAYN_SCRIPTS_DIR/$script"
+    info "$script: установлен"
+  fi
+done
+
+# Алиас для update-rules.sh (удобный вызов)
+mkdir -p "$HOME/.local/bin"
+ln -sf "$V2RAYN_SCRIPTS_DIR/update-rules.sh" "$HOME/.local/bin/v2rayn-update-rules"
+info "update-rules.sh: алиас ~/.local/bin/v2rayn-update-rules"
+
+# Установка systemd timer для авто-обновления правил
+header "Авто-обновление geoip/geosite (systemd timer)"
+SYSTEMD_USER_DIR="$HOME/.config/systemd/user"
+mkdir -p "$SYSTEMD_USER_DIR"
+
+if [ -f "$SCRIPT_DIR/lib/systemd/v2rayn-rules-update.service" ] && \
+   [ -f "$SCRIPT_DIR/lib/systemd/v2rayn-rules-update.timer" ]; then
+  # Путь к update-rules.sh в systemd unit должен быть абсолютным
+  sed "s|ExecStart=.*|ExecStart=$V2RAYN_SCRIPTS_DIR/update-rules.sh|" \
+    "$SCRIPT_DIR/lib/systemd/v2rayn-rules-update.service" > "$SYSTEMD_USER_DIR/v2rayn-rules-update.service"
+  cp -f "$SCRIPT_DIR/lib/systemd/v2rayn-rules-update.timer" "$SYSTEMD_USER_DIR/v2rayn-rules-update.timer"
+
+  if systemctl --user daemon-reload 2>/dev/null; then
+    systemctl --user enable v2rayn-rules-update.timer 2>/dev/null || true
+    systemctl --user start v2rayn-rules-update.timer 2>/dev/null || true
+    info "Systemd timer: v2rayn-rules-update.timer (еженедельно)"
+    info "  Просмотр: systemctl --user list-timers v2rayn-rules-update.timer"
+  else
+    warn "systemd --user недоступен. Timer не установлен."
+    warn "  Ручной запуск: $V2RAYN_SCRIPTS_DIR/update-rules.sh"
+  fi
+else
+  warn "Файлы systemd не найдены. Timer не установлен."
 fi
-if [ -f "$SCRIPT_DIR/scripts/proxy_set_linux_sh.sh" ]; then
-  cp -f "$SCRIPT_DIR/scripts/proxy_set_linux_sh.sh" "$V2RAYN_BINCONFIG_DIR/proxy_set_linux_sh.sh"
-  chmod +x "$V2RAYN_BINCONFIG_DIR/proxy_set_linux_sh.sh"
-fi
-info "Скрипты управления установлены"
 
 # ---- 8. Импорт подписок в БД v2rayN ----
 header "Импорт подписок в v2rayN"

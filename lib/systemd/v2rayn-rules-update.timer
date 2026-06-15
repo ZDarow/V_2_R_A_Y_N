@@ -1,0 +1,11 @@
+[Unit]
+Description=v2rayN Russia — еженедельное обновление geoip/geosite правил
+Documentation=https://github.com/ZDarow/V_2_R_A_Y_N
+
+[Timer]
+OnCalendar=weekly
+Persistent=true
+RandomizedDelaySec=6h
+
+[Install]
+WantedBy=timers.target

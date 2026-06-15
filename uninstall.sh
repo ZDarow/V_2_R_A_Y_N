@@ -37,6 +37,8 @@ echo "  - v2rayN (пакет + /opt/v2rayN/)"
 echo "  - ~/.config/v2rayN/"
 echo "  - ~/.local/share/v2rayN/"
 echo "  - ~/.local/bin/v2rayn (symlink)"
+echo "  - ~/.local/bin/v2rayn-update-rules (symlink)"
+echo "  - systemd timer v2rayn-rules-update (будет отключён)"
 echo "  - Системный прокси (будет выключен)"
 echo "  - .NET Runtime НЕ удаляется (общий компонент)"
 if [ -n "$BACKUP_DIR" ]; then
@@ -100,17 +102,44 @@ if [ -d /opt/v2rayN ]; then
   sudo rm -rf /opt/v2rayN 2>/dev/null || true
 fi
 
-# 4. Удаление symlink
-if [ -L "$HOME/.local/bin/v2rayn" ]; then
-  rm -f "$HOME/.local/bin/v2rayn"
-  info "Symlink ~/.local/bin/v2rayn удалён"
+# 4. Отключение systemd timer (авто-обновление правил)
+if systemctl --user list-timers v2rayn-rules-update.timer &>/dev/null 2>&1; then
+  info "Отключение systemd timer v2rayn-rules-update..."
+  systemctl --user stop v2rayn-rules-update.timer 2>/dev/null || true
+  systemctl --user disable v2rayn-rules-update.timer 2>/dev/null || true
+  rm -f "$HOME/.config/systemd/user/v2rayn-rules-update.service"
+  rm -f "$HOME/.config/systemd/user/v2rayn-rules-update.timer"
+  systemctl --user daemon-reload 2>/dev/null || true
+  info "Systemd timer удалён"
 fi
 
-# 5. Удаление конфигов
+# 5. Удаление symlink
+for link in v2rayn v2rayn-update-rules; do
+  if [ -L "$HOME/.local/bin/$link" ]; then
+    rm -f "$HOME/.local/bin/$link"
+    info "Symlink ~/.local/bin/$link удалён"
+  fi
+done
+
+# 6. Удаление конфигов
 for dir in "$HOME/.config/v2rayN" "$HOME/.local/share/v2rayN"; do
   if [ -d "$dir" ]; then
     rm -rf "$dir"
     info "Удалено: $dir"
+  fi
+done
+
+# 7. Удаление кэша
+if [ -d "$HOME/.cache/v2rayN" ]; then
+  rm -rf "$HOME/.cache/v2rayN"
+  info "Кэш удалён: ~/.cache/v2rayN"
+fi
+
+# 8. Удаление shared библиотеки
+for libpath in "$HOME/.local/share/v2rayN/lib/common.sh" "$HOME/.local/lib/v2rayN/common.sh"; do
+  if [ -f "$libpath" ]; then
+    rm -f "$libpath"
+    info "Удалено: $libpath"
   fi
 done
 

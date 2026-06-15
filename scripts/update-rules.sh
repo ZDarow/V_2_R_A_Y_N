@@ -1,107 +1,245 @@
 #!/bin/bash
 set -euo pipefail
 
-# v2rayN Russia Rules Updater — обновление geoip/geosite из runetfreedom/russia-v2ray-rules-dat (ветка release)
+# update-rules.sh — Автономное обновление geoip/geosite правил
+# ============================================================================
+# Особенности:
+#   - Retry с экспоненциальной задержкой при сетевых ошибках
+#   - SHA256 верификация скачанных файлов
+#   - Блокировка конкурентного запуска
+#   - Поддержка systemd timer для автоматического запуска
+#   - Логирование в ~/.local/share/v2rayN/logs/update-rules.log
+#   - Кэширование: если скачать не удалось — использует предыдущую версию
+#
+# Использование:
+#   ./scripts/update-rules.sh              # Однократное обновление
+#   ./scripts/update-rules.sh --install-timer  # Установить systemd timer
+#   ./scripts/update-rules.sh --remove-timer   # Удалить systemd timer
+#   ./scripts/update-rules.sh --status         # Проверить статус
+# ============================================================================
 
-RULES_RELEASE_URL="https://raw.githubusercontent.com/runetfreedom/russia-v2ray-rules-dat/release"
-V2RAYN_BIN_DIR="${V2RAYN_BIN_DIR:-$HOME/.local/share/v2rayN/bin}"
+SCRIPT_NAME="update-rules"
+SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
+LIB_DIR="$(cd "$SCRIPT_DIR/../lib" && pwd)"
 
-echo "[v2rayN Russia Rules Updater]"
-echo "Обновление правил geoip/geosite..."
+# Подключаем общую библиотеку
+if [ -f "$LIB_DIR/common.sh" ]; then
+  source "$LIB_DIR/common.sh"
+else
+  # Fallback: минимальные функции, если lib/common.sh не найден
+  info()  { echo -e "\033[0;32m[✓]\033[0m $1"; }
+  warn()  { echo -e "\033[1;33m[!]\033[0m $1"; }
+  error() { echo -e "\033[0;31m[✗]\033[0m $1"; exit 1; }
+  download_with_retry() {
+    local url="$1" dest="$2" max_retries="${3:-3}" delay="${4:-2}" i=0
+    while [ "$i" -lt "$max_retries" ]; do
+      i=$((i+1))
+      if command -v curl &>/dev/null; then curl -sSL --connect-timeout 20 -o "$dest.tmp" "$url" && mv "$dest.tmp" "$dest" && return 0
+      elif command -v wget &>/dev/null; then wget -q --timeout=20 -O "$dest.tmp" "$url" && mv "$dest.tmp" "$dest" && return 0
+      fi
+      [ "$i" -lt "$max_retries" ] && sleep "$delay" && delay=$((delay*2))
+    done
+    return 1
+  }
+  verify_sha256() { local f="$1" u="$2"; local e s; s=$(sha256sum "$f" 2>/dev/null | cut -d' ' -f1); e=$(curl -sSL "$u" 2>/dev/null | cut -d' ' -f1); [ -n "$e" ] && [ "$e" = "$s" ]; }
+  validate_dat() { [ -f "$1" ] && [ -s "$1" ]; }
+  acquire_lock() { return 0; }
+  release_lock() { return 0; }
+  file_size() { ls -lh "$1" 2>/dev/null | awk '{print $5}'; }
+fi
 
-if [ ! -d "$V2RAYN_BIN_DIR" ]; then
-  echo "Ошибка: директория $V2RAYN_BIN_DIR не найдена."
-  echo "Убедитесь, что v2rayN установлен."
+# ---- Константы ----
+RELEASE_URL="https://raw.githubusercontent.com/runetfreedom/russia-v2ray-rules-dat/release"
+BIN_DIR="${V2RAYN_BIN_DIR:-$HOME/.local/share/v2rayN/bin}"
+CACHE_DIR="$HOME/.cache/v2rayN/rules"
+SYSTEMD_DIR="$HOME/.config/systemd/user"
+TIMER_NAME="v2rayn-rules-update"
+SERVICE_FILE="$LIB_DIR/../lib/systemd/${TIMER_NAME}.service"
+TIMER_FILE="$LIB_DIR/../lib/systemd/${TIMER_NAME}.timer"
+
+# ---- Парсинг аргументов ----
+ARG="${1:-}"
+case "$ARG" in
+  --install-timer) ACTION="install-timer" ;;
+  --remove-timer)  ACTION="remove-timer"  ;;
+  --status)        ACTION="status"        ;;
+  *)               ACTION="update"        ;;
+esac
+
+# ---- Установка/удаление systemd timer ----
+install_timer() {
+  log_header "Установка systemd timer"
+
+  if [ ! -f "$SERVICE_FILE" ] || [ ! -f "$TIMER_FILE" ]; then
+    log_error "Файлы systemd не найдены в $LIB_DIR/../lib/systemd/"
+  fi
+
+  mkdir -p "$SYSTEMD_DIR"
+  cp -f "$SERVICE_FILE" "$SYSTEMD_DIR/${TIMER_NAME}.service"
+  cp -f "$TIMER_FILE" "$SYSTEMD_DIR/${TIMER_NAME}.timer"
+
+  systemctl --user daemon-reload 2>/dev/null || true
+  systemctl --user enable "${TIMER_NAME}.timer" 2>/dev/null || true
+  systemctl --user start "${TIMER_NAME}.timer" 2>/dev/null || true
+
+  log_info "Systemd timer установлен: ${TIMER_NAME}.timer"
+  log_info "  Расписание: еженедельно (OnCalendar=weekly) + 6h случайная задержка"
+  log_info "  Просмотр: systemctl --user list-timers ${TIMER_NAME}.timer"
+}
+
+remove_timer() {
+  log_header "Удаление systemd timer"
+
+  systemctl --user stop "${TIMER_NAME}.timer" 2>/dev/null || true
+  systemctl --user disable "${TIMER_NAME}.timer" 2>/dev/null || true
+  rm -f "$SYSTEMD_DIR/${TIMER_NAME}.service" "$SYSTEMD_DIR/${TIMER_NAME}.timer"
+  systemctl --user daemon-reload 2>/dev/null || true
+
+  log_info "Systemd timer удалён: ${TIMER_NAME}"
+}
+
+show_status() {
+  echo "╔══════════════════════════════════════════════════╗"
+  echo "║  v2rayN — статус авто-обновления правил         ║"
+  echo "╚══════════════════════════════════════════════════╝"
+  echo ""
+
+  # Timer status
+  if systemctl --user --no-pager list-timers "${TIMER_NAME}.timer" &>/dev/null 2>&1; then
+    echo "  Systemd timer: УСТАНОВЛЕН"
+    systemctl --user --no-pager list-timers "${TIMER_NAME}.timer" 2>/dev/null
+  else
+    echo "  Systemd timer: НЕ УСТАНОВЛЕН"
+    echo "  Установка: $0 --install-timer"
+  fi
+  echo ""
+
+  # Rules status
+  for f in geoip.dat geosite.dat; do
+    if [ -f "$BIN_DIR/$f" ]; then
+      echo "  $f: $(file_size "$BIN_DIR/$f") (последнее обновление: $(stat -c '%y' "$BIN_DIR/$f" 2>/dev/null | cut -d. -f1 || echo 'неизвестно'))"
+    else
+      echo "  $f: НЕ УСТАНОВЛЕН"
+    fi
+  done
+  echo ""
+
+  # Last update log
+  if [ -f "$LOG_FILE" ]; then
+    echo "  Последнее обновление в логе:"
+    tail -3 "$LOG_FILE" 2>/dev/null
+  fi
+  echo ""
+
+  echo "  systemctl --user list-timers           # список таймеров"
+  echo "  journalctl --user -u ${TIMER_NAME}.service  # логи обновления"
+  echo "  $0 --install-timer                 # установить таймер"
+  echo "  $0 --remove-timer                  # удалить таймер"
+}
+
+# ---- Обработка специальных действий ----
+case "$ACTION" in
+  install-timer) install_timer; exit 0 ;;
+  remove-timer)  remove_timer;  exit 0 ;;
+  status)        show_status;   exit 0 ;;
+esac
+
+# ---- Основное обновление ----
+# Инициализация логирования (если lib/common.sh загружен)
+if declare -f log_init &>/dev/null; then
+  log_init
+else
+  LOG_DIR="$HOME/.local/share/v2rayN/logs"
+  mkdir -p "$LOG_DIR"
+  LOG_FILE="$LOG_DIR/${SCRIPT_NAME}.log"
+fi
+
+log_header "v2rayN Russia Rules Updater"
+mkdir -p "$BIN_DIR" "$CACHE_DIR"
+
+# Блокировка конкурентного запуска
+if ! acquire_lock; then
+  log_warn "Предыдущий запуск ещё выполняется. Выход."
   exit 1
 fi
 
-# Функция загрузки с проверкой
-download_file() {
-  local url="$1"
-  local dest="$2"
-  local tmp_dest="${dest}.tmp"
+# Retry-загрузка + SHA256 проверка
+update_file() {
+  local name="$1"
+  local url="$RELEASE_URL/$name"
+  local sha_url="${url}.sha256"
+  local dest="$BIN_DIR/$name"
+  local cache="$CACHE_DIR/$name"
 
-  if command -v curl &>/dev/null; then
-    curl -sSL --connect-timeout 20 -o "$tmp_dest" "$url" && mv "$tmp_dest" "$dest" && return 0
+  log_info "Загрузка $name ..."
+
+  # Пробуем скачать во временный файл
+  local tmp_file="/tmp/${name}.$$"
+  if download_with_retry "$url" "$tmp_file" 3 2; then
+    log_info "  Скачан: $(file_size "$tmp_file")"
+
+    # Проверка SHA256
+    local sha_ok=2  # 2 = нет checksum файла
+    if declare -f verify_sha256 &>/dev/null; then
+      verify_sha256 "$tmp_file" "$sha_url" && sha_ok=0 || sha_ok=$?
+    fi
+
+    if [ "$sha_ok" -eq 0 ]; then
+      # SHA256 совпал — устанавливаем
+      cp -f "$tmp_file" "$cache"
+      mv -f "$tmp_file" "$dest"
+      log_info "  $name: установлен (SHA256 OK)"
+      return 0
+    elif [ "$sha_ok" -eq 2 ]; then
+      # Нет checksum файла — устанавливаем с предупреждением
+      cp -f "$tmp_file" "$cache"
+      mv -f "$tmp_file" "$dest"
+      log_info "  $name: установлен (без SHA256 проверки)"
+      return 0
+    else
+      # SHA256 не совпал
+      log_warn "  $name: SHA256 не совпал. Использую кэшированную версию."
+      rm -f "$tmp_file"
+    fi
+  else
+    log_warn "  $name: не удалось скачать после 3 попыток"
+    rm -f "$tmp_file"
   fi
-  if command -v wget &>/dev/null; then
-    wget -q --timeout=20 -O "$tmp_dest" "$url" && mv "$tmp_dest" "$dest" && return 0
+
+  # Fallback: кэш
+  if [ -f "$cache" ] && validate_dat "$cache"; then
+    cp -f "$cache" "$dest"
+    log_info "  $name: восстановлен из кэша ($(file_size "$cache"))"
+    return 0
   fi
+
+  log_warn "  $name: кэш пуст. Файл не обновлён."
   return 1
 }
 
-# Каталог для загрузки
-TMP_RULES=$(mktemp -d)
-trap 'rm -rf "$TMP_RULES"' EXIT
+# Обновляем файлы
+update_file "geoip.dat"
+update_file "geosite.dat"
 
-# SHA256 верификация
-verify_sha256() {
-  local dat_file="$1"
-  local sha_url="$2"
-  local sha_file="${dat_file}.sha256"
-  if download_file "$sha_url" "$sha_file"; then
-    local expected
-    expected=$(cut -d' ' -f1 < "$sha_file" 2>/dev/null || echo "")
-    if [ -n "$expected" ]; then
-      local actual
-      actual=$(sha256sum "$dat_file" 2>/dev/null | cut -d' ' -f1 || echo "")
-      rm -f "$sha_file"
-      if [ "$expected" = "$actual" ]; then
-        return 0
-      fi
-      echo "⚠️  SHA256 не совпадает (ожидается: $expected, получено: $actual)"
-      return 1
-    fi
-  fi
-  echo "⚠️  Нет SHA256 checksum для проверки (пропускаем)"
-  return 0
-}
-
-# Загрузка geoip.dat
-echo "Загрузка geoip.dat..."
-if download_file "$RULES_RELEASE_URL/geoip.dat" "$TMP_RULES/geoip.dat" && verify_sha256 "$TMP_RULES/geoip.dat" "$RULES_RELEASE_URL/geoip.dat.sha256"; then
-  echo "   geoip.dat:    $(ls -lh "$TMP_RULES/geoip.dat" | awk '{print $5}')"
-else
-  rm -f "$TMP_RULES/geoip.dat"
-  echo "ОШИБКА: не удалось загрузить geoip.dat"
-fi
-
-# Загрузка geosite.dat
-echo "Загрузка geosite.dat..."
-if download_file "$RULES_RELEASE_URL/geosite.dat" "$TMP_RULES/geosite.dat" && verify_sha256 "$TMP_RULES/geosite.dat" "$RULES_RELEASE_URL/geosite.dat.sha256"; then
-  echo "   geosite.dat:  $(ls -lh "$TMP_RULES/geosite.dat" | awk '{print $5}')"
-else
-  rm -f "$TMP_RULES/geosite.dat"
-  echo "ОШИБКА: не удалось загрузить geosite.dat"
-fi
-
-# Валидация загруженных файлов
-VALID=true
+# Финальная проверка
+log_header "Проверка"
+ALL_OK=true
 for f in geoip.dat geosite.dat; do
-  if [ ! -f "$TMP_RULES/$f" ]; then
-    echo "⚠️  $f: пропущен (не загружен)"
-    VALID=false
-  elif [ ! -s "$TMP_RULES/$f" ]; then
-    echo "ОШИБКА: $f пуст"
-    VALID=false
+  if [ -f "$BIN_DIR/$f" ] && validate_dat "$BIN_DIR/$f"; then
+    log_info "  $f: OK ($(file_size "$BIN_DIR/$f"))"
+  else
+    log_warn "  $f: ОТСУТСТВУЕТ или повреждён"
+    ALL_OK=false
   fi
 done
 
-if [ "$VALID" = true ]; then
-  # Бэкап старых правил (только если новые валидны)
-  BACKUP_DIR="$V2RAYN_BIN_DIR/backup-rules-$(date +%Y%m%d-%H%M%S)"
-  mkdir -p "$BACKUP_DIR"
-  cp -f "$V2RAYN_BIN_DIR/geoip.dat" "$BACKUP_DIR/" 2>/dev/null || true
-  cp -f "$V2RAYN_BIN_DIR/geosite.dat" "$BACKUP_DIR/" 2>/dev/null || true
-  echo "   Бэкап:        $BACKUP_DIR"
-
-  # Установка новых правил
-  cp -f "$TMP_RULES/geoip.dat" "$V2RAYN_BIN_DIR/geoip.dat"
-  cp -f "$TMP_RULES/geosite.dat" "$V2RAYN_BIN_DIR/geosite.dat"
-  echo "✅ Правила обновлены."
+if [ "$ALL_OK" = true ]; then
+  log_info "Обновление завершено успешно."
 else
-  echo "⚠️ Ошибка загрузки. Текущие правила сохранены без изменений."
+  log_warn "Обновление завершено с ошибками."
 fi
 
+log_info "Для применения изменений перезапустите v2rayN."
 echo ""
-echo "Перезапустите v2rayN для применения изменений."
+log_info "Совет: установите systemd timer для авто-обновления:"
+log_info "  $0 --install-timer"

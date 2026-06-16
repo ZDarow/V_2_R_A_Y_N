@@ -242,6 +242,11 @@ done
 if [ "$ALL_OK" = true ]; then
   log_info "Обновление завершено успешно."
 
+  # Desktop notification
+  command -v notify-send &>/dev/null && \
+    notify-send -i v2rayN "v2rayN: правила обновлены" \
+      "GeoIP/Geosite обновлены успешно" 2>/dev/null || true
+
   # Авто-рестарт v2rayN (если запрошено)
   if [ "$RESTART_V2RAYN" = true ]; then
     log_info "Перезапуск v2rayN..."

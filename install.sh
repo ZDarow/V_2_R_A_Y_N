@@ -75,6 +75,7 @@ show_help() {
   echo "  --force-reinstall   Переустановить v2rayN, даже если уже установлен"
   echo "  --skip-v2rayn       Не устанавливать v2rayN (только конфиги и подписки)"
   echo "  --repo-url <url>    URL репозитория (по умолчанию: ZDarow/V_2_R_A_Y_N)"
+  echo "  --kill-switch       Включить kill-switch (iptables) после установки"
   exit 0
 }
 while [[ $# -gt 0 ]]; do
@@ -83,6 +84,7 @@ while [[ $# -gt 0 ]]; do
     --force-reinstall) FORCE_REINSTALL=true; shift ;;
     --skip-v2rayn) SKIP_V2RAYN=true; shift ;;
     --repo-url) REPO_URL="$2"; shift 2 ;;
+    --kill-switch) KILL_SWITCH=true; shift ;;
     *) warn "Неизвестный флаг: $1 (используйте --help для списка)"; shift ;;
   esac
 done
@@ -326,7 +328,7 @@ V2RAYN_SCRIPTS_DIR="$HOME/.local/share/v2rayN/scripts"
 mkdir -p "$V2RAYN_SCRIPTS_DIR"
 
 # Утилитарные скрипты
-for script in proxy-toggle.sh proxy_set_linux_sh.sh update-rules.sh; do
+for script in proxy-toggle.sh proxy_set_linux_sh.sh update-rules.sh status.sh diagnose.sh kill-switch.sh; do
   local_src="$SCRIPT_DIR/scripts/$script"
   if [ -f "$local_src" ]; then
     cp -f "$local_src" "$V2RAYN_SCRIPTS_DIR/$script"
@@ -541,7 +543,21 @@ else
   warn "v2rayN не найден в PATH. Запустите вручную: v2rayn"
 fi
 
-# ---- 13. Завершение ----
+# ---- 13. Kill-switch (опционально) ----
+if [ "${KILL_SWITCH:-false}" = true ]; then
+  header "Kill-switch (iptables)"
+  if command -v iptables &>/dev/null && sudo -n true 2>/dev/null; then
+    info "Включение kill-switch..."
+    sudo "$V2RAYN_SCRIPTS_DIR/kill-switch.sh" on 2>/dev/null && \
+      info "Kill-switch активен. Трафик блокируется вне прокси." || \
+      warn "Не удалось включить kill-switch (нужен sudo)"
+  else
+    warn "iptables не найден или sudo недоступен. Kill-switch не включён."
+    warn "  Включить вручную: sudo ~/.local/share/v2rayN/scripts/kill-switch.sh on"
+  fi
+fi
+
+# ---- 14. Завершение ----
 echo ""
 echo -e "${CYAN}═══════════════════════════════════════════════════════════════${NC}"
 echo -e "${GREEN}  v2rayN установлен и запущен!${NC}"
@@ -550,6 +566,8 @@ echo ""
 echo -e "  ${YELLOW}Системный прокси:${NC}    активен (SOCKS5 :10808, HTTP :10809)"
 echo -e "  ${YELLOW}Авто-обновление:${NC}     systemd timer (еженедельно)"
 echo -e "  ${YELLOW}Автозапуск:${NC}          при входе в систему"
+echo -e "  ${YELLOW}Проверка статуса:${NC}    ~/.local/share/v2rayN/scripts/status.sh"
+echo -e "  ${YELLOW}Диагностика:${NC}         ~/.local/share/v2rayN/scripts/diagnose.sh"
 echo -e "  ${YELLOW}Выключить прокси:${NC}    ~/.config/v2rayN/proxy-toggle.sh off"
 echo -e "  ${YELLOW}Обновить правила:${NC}    v2rayn-update-rules"
 echo -e "  ${YELLOW}Статус:${NC}              v2rayn-update-rules --status"

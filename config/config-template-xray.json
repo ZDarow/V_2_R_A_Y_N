@@ -1,5 +1,7 @@
 {
-  "_warning": "⚠️ Xray-core ОТКЛЮЧАЕТ allowInsecure с 1 августа 2026. Замените на verifyPeerCertByName или pinnedPeerCertSha256 в настройках подписки v2rayN.",
+  "_warning": "⚠️ Xray-core ОТКЛЮЧАЕТ allowInsecure с 1 августа 2026.",
+  "_fix": "В настройках подписки v2rayN: ✏️ → Отпечаток сертификата → Вкл (pinnedPeerCertSha256)",
+  "_example_pinned": "'pinnedPeerCertSha256': ['SHA256-отпечаток сертификата вашего сервера'] — получите из v2rayNG/лога подключения",
   "policy": {
     "levels": {
       "0": {
@@ -111,7 +113,7 @@
     }
   ],
   "routing": {
-    "domainStrategy": "IPIfNonMatch",
+    "domainStrategy": "IPOnDemand",
     "domainMatcher": "hybrid",
     "rules": [
       {

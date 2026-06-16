@@ -41,6 +41,7 @@ echo "  - ~/.local/bin/v2rayn-update-rules (symlink)"
 echo "  - systemd service v2rayn (будет отключён)"
 echo "  - systemd timer v2rayn-rules-update (будет отключён)"
 echo "  - XDG автозапуск v2rayn.desktop"
+echo "  - Kill-switch iptables (будет выключен)"
 echo "  - Системный прокси (будет выключен)"
 echo "  - .NET Runtime НЕ удаляется (общий компонент)"
 if [ -n "$BACKUP_DIR" ]; then
@@ -67,7 +68,21 @@ if [ -n "$BACKUP_DIR" ]; then
   done
 fi
 
-# 1. Отключение системного прокси
+# 1. Kill-switch (iptables)
+if command -v iptables &>/dev/null && iptables -L V2RAYN &>/dev/null 2>&1; then
+  info "Отключение kill-switch (iptables)..."
+  if sudo -n true 2>/dev/null; then
+    sudo iptables -D OUTPUT -j V2RAYN 2>/dev/null || true
+    sudo iptables -F V2RAYN 2>/dev/null || true
+    sudo iptables -X V2RAYN 2>/dev/null || true
+    info "Kill-switch отключён"
+  else
+    warn "Не удалось отключить kill-switch (требуется sudo)."
+    warn "  Выключите вручную: sudo kill-switch.sh off"
+  fi
+fi
+
+# 2. Отключение системного прокси
 info "Отключение системного прокси..."
 command -v gsettings &>/dev/null && {
   gsettings set org.gnome.system.proxy mode 'none' 2>/dev/null || true
@@ -80,7 +95,7 @@ if [ -n "$KWC" ]; then
   info "Системный прокси выключен (KDE)"
 fi
 
-# 2. Удаление v2rayN (dpkg / dnf / pacman)
+# 3. Удаление v2rayN (dpkg / dnf / pacman)
 if command -v dpkg &>/dev/null; then
   if dpkg -l v2rayn &>/dev/null 2>&1; then
     info "Удаление пакета v2rayN (dpkg)..."
@@ -98,13 +113,13 @@ elif command -v pacman &>/dev/null; then
   fi
 fi
 
-# 3. Удаление /opt/v2rayN/ (остатки после dpkg)
+# 4. Удаление /opt/v2rayN/ (остатки после dpkg)
 if [ -d /opt/v2rayN ]; then
   info "Удаление /opt/v2rayN/..."
   sudo rm -rf /opt/v2rayN 2>/dev/null || true
 fi
 
-# 4. Отключение systemd service + timer
+# 5. Отключение systemd service + timer
 # v2rayn.service (сам v2rayN)
 if systemctl --user is-enabled v2rayn.service &>/dev/null 2>&1; then
   info "Отключение systemd service v2rayn..."
@@ -126,7 +141,7 @@ if systemctl --user list-timers v2rayn-rules-update.timer &>/dev/null 2>&1; then
   info "Systemd timer удалён"
 fi
 
-# 5. Удаление XDG autostart
+# 6. Удаление XDG autostart
 if [ -f "$HOME/.config/autostart/v2rayn.desktop" ]; then
   rm -f "$HOME/.config/autostart/v2rayn.desktop"
   info "Автозапуск v2rayn.desktop удалён"

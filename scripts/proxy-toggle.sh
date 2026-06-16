@@ -14,7 +14,7 @@ case "${1:-status}" in
     if [ -f "$PROXY_SCRIPT" ]; then
       bash "$PROXY_SCRIPT" manual "127.0.0.1" "10809" "$IGNORE_HOSTS"
     else
-      # Прямая установка GNOME
+# Прямая установка GNOME
       command -v gsettings &>/dev/null && {
         gsettings set org.gnome.system.proxy mode 'manual' 2>/dev/null || true
         gsettings set org.gnome.system.proxy.http host '127.0.0.1' 2>/dev/null || true
@@ -44,10 +44,12 @@ case "${1:-status}" in
         "$KWC" --file kioslaverc --group "Proxy Settings" --key httpsProxy "http://127.0.0.1:10809" 2>/dev/null || true
         "$KWC" --file kioslaverc --group "Proxy Settings" --key socksProxy "http://127.0.0.1:10808" 2>/dev/null || true
         "$KWC" --file kioslaverc --group "Proxy Settings" --key NoProxyFor "$IGNORE_HOSTS" 2>/dev/null || true
-        dbus-send --type=signal /KIO/Scheduler org.kde.KIO.Scheduler.reparseSlaveConfiguration string:"" 2>/dev/null || true
+        dbus-send --type=signal /IO/Scheduler org.kde.KIO.Scheduler.reparseSlaveConfiguration string:"" 2>/dev/null || true
         echo "Прокси включён (KDE)"
       fi
     fi
+    command -v notify-send &>/dev/null && \
+      notify-send -i v2rayN "v2rayN" "Системный прокси включён" 2>/dev/null || true
     ;;
   off|disable|none)
     if [ -f "$PROXY_SCRIPT" ]; then
@@ -60,10 +62,12 @@ case "${1:-status}" in
       KWC=$(command -v kwriteconfig6 2>/dev/null || command -v kwriteconfig5 2>/dev/null || true)
       if [ -n "$KWC" ]; then
         "$KWC" --file kioslaverc --group "Proxy Settings" --key ProxyType 0 2>/dev/null || true
-        dbus-send --type=signal /KIO/Scheduler org.kde.KIO.Scheduler.reparseSlaveConfiguration string:"" 2>/dev/null || true
+        dbus-send --type=signal /IO/Scheduler org.kde.KIO.Scheduler.reparseSlaveConfiguration string:"" 2>/dev/null || true
         echo "Прокси выключен (KDE)"
       fi
     fi
+    command -v notify-send &>/dev/null && \
+      notify-send -i v2rayN "v2rayN" "Системный прокси выключен" 2>/dev/null || true
     ;;
   status)
     if command -v gsettings &>/dev/null; then

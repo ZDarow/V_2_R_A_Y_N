@@ -4,16 +4,23 @@ set -euo pipefail
 # mobile-setup-termux.sh — Настройка v2rayNG на Android через Termux без ПК
 # ============================================================================
 # Запуск в Termux:
-#   pkg install curl
-#   curl -sSL https://raw.githubusercontent.com/ZDarow/V_2_R_A_Y_N/main/scripts/mobile-setup-termux.sh | bash
+#   bash scripts/mobile-setup-termux.sh                       # интерактивный
+#   bash scripts/mobile-setup-termux.sh --yes                 # полностью авто
+#   bash scripts/mobile-setup-termux.sh --yes --only-blocked  # + пресет
 #
-# Или после клонирования:
-#   bash scripts/mobile-setup-termux.sh
+# Pipe mode (one-liner):
+#   curl -sSL https://raw.githubusercontent.com/ZDarow/V_2_R_A_Y_N/main/scripts/mobile-setup-termux.sh | bash -s -- --yes
+#
+# Флаги:
+#   --yes, -y               Неинтерактивный режим (без запросов)
+#   --preset russia         Пресет: весь трафик через прокси (по умолчанию)
+#   --preset only-blocked   Пресет: только заблокированные сайты
+#   --only-blocked          Сокращение для --preset only-blocked
 #
 # Назначение:
 #   1. Скачивает geoip.dat / geosite.dat из runetfreedom
 #   2. Копирует правила роутинга для v2rayNG (файлы + буфер обмена)
-#   3. Выводит пошаговую инструкцию с clipboard-импортом
+#   3. При --yes: без запросов, авто-выбор пресета
 #
 # Решает проблему «курицы и яйца»: для geoip/geosite нужен прокси,
 # а для прокси нужны geoip/geosite — скрипт работает ДО первого запуска.
@@ -21,11 +28,25 @@ set -euo pipefail
 # Основано на формате из discussion #4761:
 #   https://github.com/2dust/v2rayNG/discussions/4761
 
-SCRIPT_VERSION="1.2.0"
+SCRIPT_VERSION="2.0.0"
 REPO="https://github.com/ZDarow/V_2_R_A_Y_N"
 BRANCH="main"
 RULES_RELEASE_URL="https://raw.githubusercontent.com/runetfreedom/russia-v2ray-rules-dat/release"
 V2RAYNG_ASSETS="/sdcard/Android/data/com.v2ray.ang/files/assets"
+
+# ---- Парсинг флагов ----
+NON_INTERACTIVE=false
+PRESET="russia"  # russia | only-blocked
+while [[ $# -gt 0 ]]; do
+  case "$1" in
+    --yes|-y) NON_INTERACTIVE=true; shift ;;
+    --preset) PRESET="$2"; shift 2 ;;
+    --preset=*) PRESET="${1#*=}"; shift ;;
+    --only-blocked) PRESET="only-blocked"; shift ;;
+    --routing-russia) PRESET="russia"; shift ;;
+    *) shift ;;
+  esac
+done
 
 # ---- Цвета ----
 RED='\033[0;31m'; GREEN='\033[0;32m'; YELLOW='\033[1;33m'; CYAN='\033[0;36m'; NC='\033[0m'
@@ -45,14 +66,16 @@ fi
 info "Termux: обнаружен"
 
 if ! pm list packages 2>/dev/null | grep -q "com.v2ray.ang"; then
-  warn "v2rayNG не установлен. Скачайте APK:"
-  warn "  https://github.com/2dust/v2rayNG/releases"
-  warn "  или через F-Droid: https://f-droid.org/packages/com.v2ray.ang/"
-  echo ""
-  read -r -t 10 -n 1 -p "Продолжить без v2rayNG? [y/N] " skip
-  echo
-  if [[ ! "${skip:-n}" =~ [yY] ]]; then
-    exit 1
+  warn "v2rayNG не установлен."
+  if [ "$NON_INTERACTIVE" = false ]; then
+    warn "  https://github.com/2dust/v2rayNG/releases"
+    warn "  или через F-Droid: https://f-droid.org/packages/com.v2ray.ang/"
+    echo ""
+    read -r -t 10 -n 1 -p "Продолжить без v2rayNG? [y/N] " skip
+    echo
+    if [[ ! "${skip:-n}" =~ [yY] ]]; then
+      exit 1
+    fi
   fi
   INSTALL_V2RAYNG=false
 else
@@ -177,13 +200,17 @@ done
 if [ "$HAS_CLIPBOARD" = true ]; then
   header "Буфер обмена + авто-импорт"
 
-  echo ""
-  echo "  Выберите пресет для копирования в буфер обмена:"
-  echo "    1) v2rayng-routing-russia.json  (всё через прокси — весь трафик)"
-  echo "    2) v2rayng-only-blocked.json    (только заблокированное)"
-  echo ""
-  read -r -t 15 -p "  Ваш выбор [1/2]: " choice
-  echo ""
+  if [ "$NON_INTERACTIVE" = false ]; then
+    echo ""
+    echo "  Выберите пресет для копирования в буфер обмена:"
+    echo "    1) v2rayng-routing-russia.json  (всё через прокси — весь трафик)"
+    echo "    2) v2rayng-only-blocked.json    (только заблокированное)"
+    echo ""
+    read -r -t 15 -p "  Ваш выбор [1/2]: " choice
+    echo ""
+  else
+    choice=1
+  fi
 
   case "${choice:-1}" in
     2|"only-blocked")
@@ -260,39 +287,57 @@ echo "  Или скопируйте URL:"
 echo "    $SUB_URL"
 
 # ---- 8. Финальная инструкция — 2 тапа! ----
-header "Осталось 2 тапа в v2rayNG"
+if [ "$NON_INTERACTIVE" = true ]; then
+  header "Автоматизация завершена"
 
-echo ""
-echo "  ╔══════════════════════════════════════════════╗"
-echo "  ║  ПРАВИЛА УЖЕ В БУФЕРЕ ОБМЕНА!                ║"
-if [ "${APP_OPENED:-false}" = true ]; then
-echo "  ║  v2rayNG УЖЕ ОТКРЫТ!                          ║"
+  echo ""
+  echo "  📋 Правила скопированы в буфер обмена"
+  if [ "${APP_OPENED:-false}" = true ]; then
+    echo "  📱 v2rayNG открыт"
+  fi
+  echo ""
+  echo "  Осталось сделать ВРУЧНУЮ (всего 2 действия):"
+  echo ""
+  echo "    1️⃣  Нажмите ≡ → Маршрутизация"
+  echo "    2️⃣  Нажмите ⋮ → Импорт из буфера обмена"
+  echo ""
+  echo "  После импорта настройте:"
+  echo "    • Доменная стратегия → IPOnDemand"
+  echo "    • Подписка → Import from URL → вставьте URL"
+  echo ""
+  echo -e "${GREEN}✅ Готово!${NC}"
+else
+  header "Осталось 2 тапа в v2rayNG"
+
+  echo ""
+  echo "  ╔══════════════════════════════════════════════╗"
+  echo "  ║  ПРАВИЛА УЖЕ В БУФЕРЕ ОБМЕНА!                ║"
+  if [ "${APP_OPENED:-false}" = true ]; then
+  echo "  ║  v2rayNG УЖЕ ОТКРЫТ!                          ║"
+  fi
+  echo "  ║                                              ║"
+  echo "  ║  1. Нажмите ≡ → Маршрутизация                ║"
+  echo "  ║  2. Нажмите ⋮ → Импорт из буфера обмена     ║"
+  echo "  ╚══════════════════════════════════════════════╝"
+  echo ""
+
+  echo "  ─── После импорта ───"
+  echo ""
+  echo "  • Доменная стратегия: Маршрутизация →"
+  echo "    поле «Доменная стратегия» → IPOnDemand"
+  echo ""
+  echo "  • Подписка: ➕ → Import from URL → вставьте URL"
+  echo "    (см. deep link выше)"
+  echo ""
+  echo "  • Отпечаток SHA256: долгое нажатие на подписку →"
+  echo "    ✏️ (карандаш) → Отпечаток сертификата → Вкл."
+  echo ""
+  echo "  • Подключение: ☁️ (обновить) → выбрать сервер → V"
+  echo ""
+  echo -e "${GREEN}✅ Готово!${NC}"
+  echo -e "   Версия скрипта: $SCRIPT_VERSION"
 fi
-echo "  ║                                              ║"
-echo "  ║  1. Нажмите ≡ → Маршрутизация                ║"
-echo "  ║  2. Нажмите ⋮ → Импорт из буфера обмена     ║"
-echo "  ╚══════════════════════════════════════════════╝"
-echo ""
-
-echo "  ─── После импорта ───"
-echo ""
-echo "  • Доменная стратегия: Маршрутизация →"
-echo "    поле «Доменная стратегия» → IPOnDemand"
-echo ""
-echo "  • Подписка: ➕ → Import from URL → вставьте URL"
-echo "    (см. deep link выше)"
-echo ""
-echo "  • Отпечаток SHA256: долгое нажатие на подписку →"
-echo "    ✏️ (карандаш) → Отпечаток сертификата → Вкл."
-echo ""
-echo "  • Подключение: ☁️ (обновить) → выбрать сервер → V"
-echo ""
-
-echo ""
-echo -e "${GREEN}✅ Готово!${NC}"
-echo -e "   Версия скрипта: $SCRIPT_VERSION"
-echo -e "   Применение правил: 2 тапа в v2rayNG"
-echo -e "   Основано на формате v2rayNG Discussion #4761"
+echo -e "   Режим: $([ "$NON_INTERACTIVE" = true ] && echo 'неинтерактивный (--yes)' || echo 'интерактивный')"
 
 if [ "$FILES_COPIED" -eq 0 ]; then
   warn "Файлы не скопированы. Выполните шаги вручную:"

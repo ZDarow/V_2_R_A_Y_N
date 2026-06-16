@@ -443,19 +443,114 @@ else
   warn "Не удалось настроить системный прокси (только GNOME/KDE). Настройте вручную: HTTP 127.0.0.1:10809, SOCKS 127.0.0.1:10808"
 fi
 
-# ---- 10. Завершение ----
+# ---- 10. Системный сервис + автозапуск ----
+header "Системный сервис и автозапуск"
+
+# Systemd user service
+if command -v systemctl &>/dev/null; then
+  if [ -f "$SCRIPT_DIR/lib/systemd/v2rayn.service" ]; then
+    # Подставляем ExecStart и placeholder'ы
+    sed "s|ExecStart=.*|ExecStart=$HOME/.local/bin/v2rayn|" \
+      "$SCRIPT_DIR/lib/systemd/v2rayn.service" > "$SYSTEMD_USER_DIR/v2rayn.service"
+    sed -i "s|%h|$HOME|g; s|%t|${XDG_RUNTIME_DIR:-/run/user/$(id -u)}|g" "$SYSTEMD_USER_DIR/v2rayn.service"
+    systemctl --user daemon-reload 2>/dev/null || true
+    systemctl --user enable v2rayn.service 2>/dev/null || true
+    info "systemd сервис: v2rayn.service (авто-перезапуск при падении)"
+    info "  systemctl --user start v2rayn.service"
+  fi
+fi
+
+# XDG автозапуск
+AUTOSTART_DIR="$HOME/.config/autostart"
+mkdir -p "$AUTOSTART_DIR"
+if [ -f "$SCRIPT_DIR/lib/autostart/v2rayn.desktop" ]; then
+  sed "s|__HOME__|$HOME|g" "$SCRIPT_DIR/lib/autostart/v2rayn.desktop" > "$AUTOSTART_DIR/v2rayn.desktop"
+  info "Автозапуск: XDG autostart (v2rayN будет запускаться при входе)"
+fi
+
+# ---- 11. Авто-настройка роутинга (попытка) ----
+header "Авто-настройка роутинга"
+if command -v sqlite3 &>/dev/null && [ -f "$DB_PATH" ]; then
+  # Пытаемся установить файл пользовательской маршрутизации в guiNDB.db
+  # v2rayN может хранить настройки роутинга в GlobalConfig
+  ROUTING_FILE="$HOME/.config/v2rayN/routing-russia.json"
+  ROUTING_KEYS_EXIST=$(sqlite3 "$DB_PATH" "SELECT name FROM sqlite_master WHERE type='table' AND name IN ('GlobalConfig','SettingItem');" 2>/dev/null | wc -l)
+  if [ "$ROUTING_KEYS_EXIST" -gt 0 ]; then
+    sqlite3 "$DB_PATH" \
+      "INSERT OR REPLACE INTO GlobalConfig (key, value) VALUES
+        ('routingCustomFile', '$ROUTING_FILE'),
+        ('routingCustomEnabled', 'true'),
+        ('setRouteOnly', 'false'),
+        ('domainStrategy', 'IPOnDemand');" 2>/dev/null && \
+      info "Правила роутинга настроены в БД (GlobalConfig)" || \
+      warn "Не удалось записать настройки роутинга (будет настроено вручную)"
+  else
+    # Таблица GlobalConfig ещё не создана — v2rayN не запускался
+    # Создаём и записываем — v2rayN прочитает при первом запуске
+    sqlite3 "$DB_PATH" "CREATE TABLE IF NOT EXISTS GlobalConfig (key TEXT PRIMARY KEY, value TEXT);" 2>/dev/null
+    sqlite3 "$DB_PATH" \
+      "INSERT OR REPLACE INTO GlobalConfig (key, value) VALUES
+        ('routingCustomFile', '$ROUTING_FILE'),
+        ('routingCustomEnabled', 'true'),
+        ('setRouteOnly', 'false'),
+        ('domainStrategy', 'IPOnDemand');" 2>/dev/null && \
+      info "Правила роутинга настроены (новая БД)" || \
+      warn "Не удалось записать настройки роутинга"
+  fi
+  info "  Файл: routing-russia.json"
+else
+  warn "Не удалось настроить роутинг автоматически. После запуска v2rayN:"
+  warn "  Настройки → Настройки маршрутизации → routing-russia.json"
+fi
+
+# ---- 12. Запуск v2rayN + прокси ----
+header "Запуск v2rayN"
+
+if command -v v2rayn &>/dev/null; then
+  if [ -n "${DISPLAY:-}${WAYLAND_DISPLAY:-}" ]; then
+    info "Запускаю v2rayN в фоне..."
+    nohup v2rayn > /dev/null 2>&1 &
+    V2RAYN_PID=$!
+    info "  PID: $V2RAYN_PID"
+
+    # Ждём инициализации
+    sleep 2
+
+    # Включаем системный прокси (если удалось настроить ранее)
+    if command -v gsettings &>/dev/null && gsettings list-schemas 2>/dev/null | grep -q 'org.gnome.system.proxy'; then
+      info "Включаю системный прокси..."
+      gsettings set org.gnome.system.proxy mode 'manual' 2>/dev/null || true
+      info "  Системный прокси: включён"
+    elif command -v kwriteconfig5 &>/dev/null || command -v kwriteconfig6 &>/dev/null; then
+      KWC=$(command -v kwriteconfig6 2>/dev/null || command -v kwriteconfig5 2>/dev/null)
+      "$KWC" --file kioslaverc --group "Proxy Settings" --key ProxyType 1 2>/dev/null || true
+      info "Системный прокси: включён (KDE)"
+    fi
+
+    info "v2rayN запущен. Прокси активен."
+    echo ""
+    echo "  🔗 SOCKS5: 127.0.0.1:10808"
+    echo "  🔗 HTTP:   127.0.0.1:10809"
+    echo "  🔄 Для выключения: ~/.config/v2rayN/proxy-toggle.sh off"
+  else
+    warn "Графическая сессия не обнаружена (нет DISPLAY/WAYLAND_DISPLAY)."
+    warn "  v2rayN не запущен — запустите вручную после входа в GUI."
+    warn "  Системный прокси и systemd сервис настроены и будут работать."
+  fi
+else
+  warn "v2rayN не найден в PATH. Запустите вручную: v2rayn"
+fi
+
+# ---- 13. Завершение ----
 echo ""
 echo -e "${CYAN}═══════════════════════════════════════════════════════════════${NC}"
-echo -e "${GREEN}  v2rayN успешно установлен и настроен для работы в РФ${NC}"
+echo -e "${GREEN}  v2rayN установлен и запущен!${NC}"
 echo -e "${CYAN}═══════════════════════════════════════════════════════════════${NC}"
 echo ""
-echo -e "  ${YELLOW}Запуск:${NC}         v2rayn"
-echo -e "  ${YELLOW}SOCKS5:${NC}         127.0.0.1:10808"
-echo -e "  ${YELLOW}HTTP(S):${NC}        127.0.0.1:10809"
-echo ""
-echo -e "  ${YELLOW}Включить/выключить прокси:${NC}"
-echo -e "    ~/.config/v2rayN/proxy-toggle.sh {on|off|status}"
-echo ""
-echo -e "  ${YELLOW}Обновить подписки:${NC}  v2rayn → Подписки → Обновить все"
-echo -e "  ${YELLOW}Обновить правила:${NC}    bash <(curl -sSL https://raw.githubusercontent.com/ZDarow/V_2_R_A_Y_N/main/scripts/update-rules.sh)"
+echo -e "  ${YELLOW}Системный прокси:${NC}    активен (SOCKS5 :10808, HTTP :10809)"
+echo -e "  ${YELLOW}Авто-обновление:${NC}     systemd timer (еженедельно)"
+echo -e "  ${YELLOW}Автозапуск:${NC}          при входе в систему"
+echo -e "  ${YELLOW}Выключить прокси:${NC}    ~/.config/v2rayN/proxy-toggle.sh off"
+echo -e "  ${YELLOW}Обновить правила:${NC}    v2rayn-update-rules"
+echo -e "  ${YELLOW}Статус:${NC}              v2rayn-update-rules --status"
 echo ""

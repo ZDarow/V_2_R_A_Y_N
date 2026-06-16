@@ -38,7 +38,9 @@ echo "  - ~/.config/v2rayN/"
 echo "  - ~/.local/share/v2rayN/"
 echo "  - ~/.local/bin/v2rayn (symlink)"
 echo "  - ~/.local/bin/v2rayn-update-rules (symlink)"
+echo "  - systemd service v2rayn (будет отключён)"
 echo "  - systemd timer v2rayn-rules-update (будет отключён)"
+echo "  - XDG автозапуск v2rayn.desktop"
 echo "  - Системный прокси (будет выключен)"
 echo "  - .NET Runtime НЕ удаляется (общий компонент)"
 if [ -n "$BACKUP_DIR" ]; then
@@ -102,7 +104,18 @@ if [ -d /opt/v2rayN ]; then
   sudo rm -rf /opt/v2rayN 2>/dev/null || true
 fi
 
-# 4. Отключение systemd timer (авто-обновление правил)
+# 4. Отключение systemd service + timer
+# v2rayn.service (сам v2rayN)
+if systemctl --user is-enabled v2rayn.service &>/dev/null 2>&1; then
+  info "Отключение systemd service v2rayn..."
+  systemctl --user stop v2rayn.service 2>/dev/null || true
+  systemctl --user disable v2rayn.service 2>/dev/null || true
+  rm -f "$HOME/.config/systemd/user/v2rayn.service"
+  systemctl --user daemon-reload 2>/dev/null || true
+  info "Systemd service v2rayn удалён"
+fi
+
+# v2rayn-rules-update.timer (авто-обновление правил)
 if systemctl --user list-timers v2rayn-rules-update.timer &>/dev/null 2>&1; then
   info "Отключение systemd timer v2rayn-rules-update..."
   systemctl --user stop v2rayn-rules-update.timer 2>/dev/null || true
@@ -113,7 +126,13 @@ if systemctl --user list-timers v2rayn-rules-update.timer &>/dev/null 2>&1; then
   info "Systemd timer удалён"
 fi
 
-# 5. Удаление symlink
+# 5. Удаление XDG autostart
+if [ -f "$HOME/.config/autostart/v2rayn.desktop" ]; then
+  rm -f "$HOME/.config/autostart/v2rayn.desktop"
+  info "Автозапуск v2rayn.desktop удалён"
+fi
+
+# 7. Удаление symlink
 for link in v2rayn v2rayn-update-rules; do
   if [ -L "$HOME/.local/bin/$link" ]; then
     rm -f "$HOME/.local/bin/$link"
@@ -121,7 +140,7 @@ for link in v2rayn v2rayn-update-rules; do
   fi
 done
 
-# 6. Удаление конфигов
+# 8. Удаление конфигов
 for dir in "$HOME/.config/v2rayN" "$HOME/.local/share/v2rayN"; do
   if [ -d "$dir" ]; then
     rm -rf "$dir"
@@ -129,13 +148,13 @@ for dir in "$HOME/.config/v2rayN" "$HOME/.local/share/v2rayN"; do
   fi
 done
 
-# 7. Удаление кэша
+# 9. Удаление кэша
 if [ -d "$HOME/.cache/v2rayN" ]; then
   rm -rf "$HOME/.cache/v2rayN"
   info "Кэш удалён: ~/.cache/v2rayN"
 fi
 
-# 8. Удаление shared библиотеки
+# 10. Удаление shared библиотеки
 for libpath in "$HOME/.local/share/v2rayN/lib/common.sh" "$HOME/.local/lib/v2rayN/common.sh"; do
   if [ -f "$libpath" ]; then
     rm -f "$libpath"

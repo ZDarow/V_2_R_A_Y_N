@@ -12,10 +12,11 @@ set -euo pipefail
 #   - Кэширование: если скачать не удалось — использует предыдущую версию
 #
 # Использование:
-#   ./scripts/update-rules.sh              # Однократное обновление
-#   ./scripts/update-rules.sh --install-timer  # Установить systemd timer
-#   ./scripts/update-rules.sh --remove-timer   # Удалить systemd timer
-#   ./scripts/update-rules.sh --status         # Проверить статус
+#   ./scripts/update-rules.sh                         # Однократное обновление
+#   ./scripts/update-rules.sh --restart-v2rayn         # Обновить + рестарт v2rayN
+#   ./scripts/update-rules.sh --install-timer          # Установить systemd timer
+#   ./scripts/update-rules.sh --remove-timer           # Удалить systemd timer
+#   ./scripts/update-rules.sh --status                 # Проверить статус
 # ============================================================================
 
 SCRIPT_NAME="update-rules"
@@ -58,13 +59,18 @@ SERVICE_FILE="$LIB_DIR/../lib/systemd/${TIMER_NAME}.service"
 TIMER_FILE="$LIB_DIR/../lib/systemd/${TIMER_NAME}.timer"
 
 # ---- Парсинг аргументов ----
-ARG="${1:-}"
-case "$ARG" in
-  --install-timer) ACTION="install-timer" ;;
-  --remove-timer)  ACTION="remove-timer"  ;;
-  --status)        ACTION="status"        ;;
-  *)               ACTION="update"        ;;
-esac
+ACTION="update"
+RESTART_V2RAYN=false
+while [[ $# -gt 0 ]]; do
+  case "$1" in
+    --install-timer)      ACTION="install-timer"      ;;
+    --remove-timer)       ACTION="remove-timer"       ;;
+    --status)             ACTION="status"             ;;
+    --restart-v2rayn|--restart) RESTART_V2RAYN=true   ;;
+    *) ;;
+  esac
+  shift
+done
 
 # ---- Установка/удаление systemd timer ----
 install_timer() {
@@ -235,11 +241,33 @@ done
 
 if [ "$ALL_OK" = true ]; then
   log_info "Обновление завершено успешно."
+
+  # Авто-рестарт v2rayN (если запрошено)
+  if [ "$RESTART_V2RAYN" = true ]; then
+    log_info "Перезапуск v2rayN..."
+    if systemctl --user is-active v2rayn.service &>/dev/null 2>&1; then
+      systemctl --user restart v2rayn.service 2>/dev/null && \
+        log_info "  v2rayn.service перезапущен" || \
+        log_warn "  Не удалось перезапустить v2rayn.service"
+    elif command -v pgrep &>/dev/null && pgrep -x v2rayn &>/dev/null; then
+      pkill -x v2rayn 2>/dev/null || true
+      log_info "  v2rayn остановлен. Запустите заново: v2rayn"
+    else
+      log_info "  v2rayn не запущен. Ничего не делаю."
+    fi
+  fi
 else
   log_warn "Обновление завершено с ошибками."
+  if [ "$RESTART_V2RAYN" = false ]; then
+    log_info "Для применения изменений перезапустите v2rayN."
+  fi
 fi
 
-log_info "Для применения изменений перезапустите v2rayN."
-echo ""
-log_info "Совет: установите systemd timer для авто-обновления:"
-log_info "  $0 --install-timer"
+if [ "$RESTART_V2RAYN" = false ]; then
+  echo ""
+  log_info "Совет: установите systemd timer для авто-обновления:"
+  log_info "  $0 --install-timer"
+  log_info ""
+  log_info "Авто-рестарт v2rayN после обновления:"
+  log_info "  $0 --restart-v2rayn"
+fi

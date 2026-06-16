@@ -1,0 +1,10 @@
+[Desktop Entry]
+Type=Application
+Name=v2rayN
+Comment=Прокси-клиент для РФ
+Exec=__HOME__/.local/bin/v2rayn
+Icon=v2rayn
+Terminal=false
+Categories=Network;X-Proxy;
+X-GNOME-Autostart-enabled=true
+X-KDE-autostart-after=panel

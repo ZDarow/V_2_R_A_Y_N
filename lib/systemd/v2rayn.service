@@ -1,0 +1,16 @@
+[Unit]
+Description=v2rayN — прокси-клиент для РФ
+Documentation=https://github.com/ZDarow/V_2_R_A_Y_N
+Wants=network-online.target
+After=network-online.target
+
+[Service]
+Type=simple
+ExecStart=%h/.local/bin/v2rayn
+Restart=on-abnormal
+RestartSec=10
+Environment=DISPLAY=:0
+Environment=XDG_RUNTIME_DIR=%t
+
+[Install]
+WantedBy=default.target

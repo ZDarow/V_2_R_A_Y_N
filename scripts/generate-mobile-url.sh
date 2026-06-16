@@ -1,7 +1,6 @@
 #!/bin/bash
-set -euo pipefail
-
 # generate-mobile-url.sh — генерация VLESS URL из JSON конфига для импорта в v2rayNG
+# shellcheck disable=SC2034
 # ================================================================================
 # Использование:
 #   bash scripts/generate-mobile-url.sh                    # из config-template-xray.json

@@ -180,7 +180,8 @@ update_file() {
   log_info "Загрузка $name ..."
 
   # Пробуем скачать во временный файл
-  local tmp_file=$(mktemp "/tmp/${name}.XXXXXX")
+  local tmp_file
+  tmp_file=$(mktemp "/tmp/${name}.XXXXXX")
   chmod 600 "$tmp_file"
   if download_with_retry "$url" "$tmp_file" 3 2; then
     log_info "  Скачан: $(file_size "$tmp_file")"

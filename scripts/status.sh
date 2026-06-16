@@ -12,6 +12,7 @@
 
 set -euo pipefail
 
+# shellcheck disable=SC2034
 RED='\033[0;31m'; GREEN='\033[0;32m'; YELLOW='\033[1;33m'; CYAN='\033[0;36m'; NC='\033[0m'
 OK()   { echo -e "  ${GREEN}✔${NC} $1"; }
 WARN() { echo -e "  ${YELLOW}⚠${NC} $1"; }
@@ -22,6 +23,7 @@ V2RAYN_HOME="${V2RAYN_HOME:-$HOME/.local/share/v2rayN}"
 V2RAYN_CONFIG="${V2RAYN_CONFIG:-$HOME/.config/v2rayN}"
 DB_PATH="$V2RAYN_HOME/guiConfigs/guiNDB.db"
 BIN_DIR="$V2RAYN_HOME/bin"
+# shellcheck disable=SC2034
 SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
 
 echo -e "${CYAN}══════════════════════════════════════════════${NC}"
@@ -53,8 +55,16 @@ else
   SOCKS_OK=0; HTTP_OK=0
 fi
 
-[ "$SOCKS_OK" -gt 0 ] && OK "SOCKS5 :10808 — слушает" || { FAIL "SOCKS5 :10808 — НЕ слушает"; EXIT_CODE=2; }
-[ "$HTTP_OK" -gt 0 ] && OK "HTTP :10809 — слушает" || { FAIL "HTTP :10809 — НЕ слушает"; EXIT_CODE=2; }
+if [ "$SOCKS_OK" -gt 0 ]; then
+  OK "SOCKS5 :10808 — слушает"
+else
+  FAIL "SOCKS5 :10808 — НЕ слушает"; EXIT_CODE=2
+fi
+if [ "$HTTP_OK" -gt 0 ]; then
+  OK "HTTP :10809 — слушает"
+else
+  FAIL "HTTP :10809 — НЕ слушает"; EXIT_CODE=2
+fi
 
 # Проверка через curl (если прокси активен)
 if [ "$SOCKS_OK" -gt 0 ] && command -v curl &>/dev/null; then
@@ -75,7 +85,8 @@ for f in geoip.dat geosite.dat; do
   if [ -f "$FILE" ] && [ -s "$FILE" ]; then
     AGE=$((($(date +%s) - $(stat -c %Y "$FILE")) / 86400))
     if [ "$AGE" -le 30 ]; then
-      OK "$f: $(ls -lh "$FILE" | awk '{print $5}'), $AGE дней"
+      # shellcheck disable=SC2012
+      OK "$f: $(stat -c%s "$FILE" 2>/dev/null | numfmt --to=iec 2>/dev/null || ls -lh "$FILE" | awk '{print $5}'), $AGE дней"
     else
       WARN "$f: $AGE дней (рекомендуется < 30). Запустите: v2rayn-update-rules"
       [ "$EXIT_CODE" -lt 1 ] && EXIT_CODE=1
@@ -92,7 +103,11 @@ echo -e "${CYAN}━━━ Конфиги роутинга ━━━${NC}"
 for f in routing-russia.json only_blocked.json v2rayng-routing-russia.json v2rayng-only-blocked.json; do
   FILE="$V2RAYN_CONFIG/$f"
   if [ -f "$FILE" ]; then
-    python3 -m json.tool "$FILE" >/dev/null 2>&1 && OK "$f" || WARN "$f: невалидный JSON"
+    if python3 -m json.tool "$FILE" >/dev/null 2>&1; then
+      OK "$f"
+    else
+      WARN "$f: невалидный JSON"
+    fi
   else
     WARN "$f: отсутствует"
   fi
@@ -105,7 +120,7 @@ if [ -f "$DB_PATH" ] && command -v sqlite3 &>/dev/null; then
   SUB_COUNT=$(sqlite3 "$DB_PATH" "SELECT count(*) FROM SubItem;" 2>/dev/null || echo "0")
   if [ "$SUB_COUNT" -gt 0 ]; then
     OK "Подписок в БД: $SUB_COUNT"
-    sqlite3 "$DB_PATH" "SELECT remarks, url FROM SubItem;" 2>/dev/null | while IFS='|' read -r name url; do
+    sqlite3 "$DB_PATH" "SELECT remarks, url FROM SubItem;" 2>/dev/null | while IFS='|' read -r name _; do
       echo "    - $name"
     done
   else

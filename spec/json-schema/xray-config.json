@@ -1,0 +1,99 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "https://github.com/ZDarow/V_2_R_A_Y_N/spec/json-schema/xray-config.json",
+  "title": "Xray-core Config",
+  "description": "Схема для конфигурации Xray-core (config-template-xray.json)",
+  "type": "object",
+  "properties": {
+    "_warning": { "type": "string" },
+    "_fix": { "type": "string" },
+    "_example_pinned": { "type": "string" },
+    "policy": {
+      "type": "object",
+      "properties": {
+        "levels": {
+          "type": "object",
+          "patternProperties": {
+            "^[0-9]+$": {
+              "type": "object",
+              "properties": {
+                "handshake": { "type": "integer", "minimum": 1 },
+                "connIdle": { "type": "integer", "minimum": 10 },
+                "uplinkOnly": { "type": "integer", "minimum": 0 },
+                "downlinkOnly": { "type": "integer", "minimum": 0 },
+                "bufferSize": { "type": "integer" }
+              }
+            }
+          }
+        },
+        "system": {
+          "type": "object",
+          "properties": {
+            "statsInboundUplink": { "type": "boolean" },
+            "statsInboundDownlink": { "type": "boolean" },
+            "statsOutboundUplink": { "type": "boolean" },
+            "statsOutboundDownlink": { "type": "boolean" }
+          }
+        }
+      },
+      "required": ["levels"]
+    },
+    "dns": {
+      "type": "object",
+      "properties": {
+        "hosts": { "type": "object" },
+        "servers": {
+          "type": "array",
+          "items": { "type": "string" },
+          "minItems": 1
+        },
+        "queryStrategy": { "type": "string", "enum": ["UseIP", "UseIPv4", "UseIPv6"] },
+        "disableCache": { "type": "boolean" },
+        "disableFallback": { "type": "boolean" }
+      },
+      "required": ["servers"]
+    },
+    "inbounds": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "properties": {
+          "port": { "type": "integer", "minimum": 1, "maximum": 65535 },
+          "protocol": { "type": "string" },
+          "settings": { "type": "object" },
+          "sniffing": { "type": "object" },
+          "tag": { "type": "string" }
+        },
+        "required": ["port", "protocol"]
+      },
+      "minItems": 1
+    },
+    "outbounds": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "properties": {
+          "protocol": { "type": "string" },
+          "settings": { "type": "object" },
+          "tag": { "type": "string" }
+        },
+        "required": ["protocol"]
+      },
+      "minItems": 1
+    },
+    "routing": {
+      "type": "object",
+      "properties": {
+        "domainStrategy": {
+          "type": "string",
+          "enum": ["AsIs", "IPIfNonMatch", "IPOnDemand"]
+        },
+        "rules": {
+          "type": "array",
+          "items": { "type": "object" }
+        }
+      }
+    }
+  },
+  "required": ["dns", "inbounds", "outbounds", "routing"]
+}

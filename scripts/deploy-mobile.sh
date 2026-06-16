@@ -182,7 +182,8 @@ fi
 # ---- 4. Режимы деплоя ----
 deploy_zip() {
   header "Создание ZIP-архива"
-  local ZIP_NAME="v2rayNG-mobile-config-$(date +%Y%m%d).zip"
+  local ZIP_NAME
+  ZIP_NAME="v2rayNG-mobile-config-$(date +%Y%m%d).zip"
   cd "$TMP_DIR"
   if command -v zip &>/dev/null; then
     zip -r "$ZIP_NAME" assets/ >/dev/null
@@ -196,7 +197,8 @@ deploy_zip() {
     echo "  Или распакуйте на компьютере и скопируйте через USB/ADB."
   else
     warn "zip не найден. Создаю плоскую копию..."
-    local flat_dir="$REPO_DIR/deploy-mobile-$(date +%Y%m%d)"
+    local flat_dir
+    flat_dir="$REPO_DIR/deploy-mobile-$(date +%Y%m%d)"
     mkdir -p "$flat_dir"
     cp "$ANDROID_DIR"/* "$flat_dir/"
     info "Файлы скопированы в: $flat_dir"
@@ -271,6 +273,7 @@ deploy_adb() {
   fi
 }
 
+# shellcheck disable=SC2120
 deploy_server() {
   header "HTTP-сервер для WiFi-передачи"
   local PORT="${1:-8080}"

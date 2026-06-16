@@ -30,9 +30,11 @@ fi
 LIB_SHARED=""
 if [ -n "$SCRIPT_DIR_INSTALLER" ] && [ -f "$SCRIPT_DIR_INSTALLER/lib/common.sh" ]; then
   LIB_SHARED="$SCRIPT_DIR_INSTALLER/lib/common.sh"
+  # shellcheck disable=SC1090
   source "$LIB_SHARED"
 elif [ -f "./lib/common.sh" ]; then
   LIB_SHARED="./lib/common.sh"
+  # shellcheck disable=SC1090
   source "$LIB_SHARED"
 fi
 
@@ -111,9 +113,11 @@ fi
 SCRIPT_PATH="$(realpath "${BASH_SOURCE[0]:-$0}" 2>/dev/null || readlink -f "${BASH_SOURCE[0]:-$0}" 2>/dev/null || echo "${BASH_SOURCE[0]:-$0}")"
 if [ -n "$SCRIPT_PATH" ] && [ -f "$(dirname "$SCRIPT_PATH")/config/routing-russia.json" ] 2>/dev/null; then
   SCRIPT_DIR="$(cd "$(dirname "$SCRIPT_PATH")" && pwd)"
+  # shellcheck disable=SC2034
   LOCAL_MODE=true
   info "Локальный режим: конфиги найдены в $SCRIPT_DIR"
 else
+  # shellcheck disable=SC2034
   LOCAL_MODE=false
   warn "Запуск через pipe или конфиги не найдены. Репозиторий будет клонирован."
   CLONE_DIR=$(mktemp -d)

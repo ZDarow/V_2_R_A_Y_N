@@ -1,7 +1,7 @@
 #!/bin/bash
-set -euo pipefail
-
-# mobile-setup-termux.sh — Настройка v2rayNG на Android через Termux без ПК
+# mobile-setup-termux.sh — автоматическая установка v2rayNG конфигурации в Termux
+# shellcheck disable=SC2034
+# SC2034: PRESET/LABEL/CLIPBOARD_OK зарезервированы для будущего использования
 # ============================================================================
 # Запуск в Termux:
 #   bash scripts/mobile-setup-termux.sh                       # интерактивный

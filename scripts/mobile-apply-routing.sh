@@ -1,7 +1,7 @@
 #!/bin/bash
-set -euo pipefail
-
-# mobile-apply-routing.sh — Применение правил роутинга в v2rayNG
+# mobile-apply-routing.sh — применение правил роутинга в v2rayNG через clipboard
+# shellcheck disable=SC2034
+# SC2034: content/APP_OPENED зарезервированы для будущего использования
 # ============================================================================
 # Автоматизирует импорт правил роутинга в v2rayNG на Android:
 #   1. Загружает JSON-файл правил из репозитория

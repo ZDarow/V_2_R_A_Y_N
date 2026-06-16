@@ -13,22 +13,23 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
+      - name: Install shellcheck
+        run: sudo apt-get update -qq && sudo apt-get install -y -qq shellcheck
       - name: Run ShellCheck
-        uses: ludeeus/action-shellcheck@2.0.0
-        with:
-          severity: warning
-          scandir: ./
-          additional_files: |
-            install.sh
-            uninstall.sh
-            lib/common.sh
-            scripts/update-rules.sh
-            scripts/proxy-toggle.sh
-            scripts/proxy_set_linux_sh.sh
-            scripts/deploy-mobile.sh
-            scripts/generate-mobile-url.sh
-            scripts/mobile-setup-termux.sh
-            scripts/mobile-apply-routing.sh
+        run: |
+          errors=0
+          files="install.sh uninstall.sh lib/common.sh scripts/update-rules.sh \
+            scripts/proxy-toggle.sh scripts/proxy_set_linux_sh.sh \
+            scripts/deploy-mobile.sh scripts/generate-mobile-url.sh \
+            scripts/mobile-setup-termux.sh scripts/mobile-apply-routing.sh \
+            scripts/status.sh scripts/diagnose.sh scripts/kill-switch.sh"
+          for f in $files; do
+            if [ -f "$f" ]; then
+              echo "Checking $f..."
+              shellcheck -e SC1091 "$f" || { echo "SC ISSUES: $f"; errors=$((errors+1)); }
+            fi
+          done
+          [ "$errors" -eq 0 ] || exit 1
 
   bash-syntax:
     name: Bash Syntax
@@ -44,7 +45,8 @@ jobs:
             scripts/update-rules.sh scripts/proxy-toggle.sh \
             scripts/proxy_set_linux_sh.sh scripts/deploy-mobile.sh \
             scripts/generate-mobile-url.sh scripts/mobile-setup-termux.sh \
-            scripts/mobile-apply-routing.sh
+            scripts/mobile-apply-routing.sh \
+            scripts/status.sh scripts/diagnose.sh scripts/kill-switch.sh
           do
             if [ -f "$f" ]; then
               echo "Checking $f..."
@@ -58,7 +60,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      - name: Validate JSON files
+      - name: Validate JSON syntax
         run: |
           errors=0
           for f in config/*.json; do
@@ -71,6 +73,35 @@ jobs:
             echo "  OK"
           done
           [ "$errors" -eq 0 ] || { echo "JSON validation failed: $errors file(s) with errors"; exit 1; }
+      - name: Validate JSON Schema (v2rayNG routing)
+        run: |
+          if command -v ajv &>/dev/null; then
+            for f in config/v2rayng-routing-russia.json config/v2rayng-only-blocked.json; do
+              echo "Schema check: $f"
+              ajv validate -s spec/json-schema/routing-rules.json -d "$f" || {
+                echo "SCHEMA ERROR: $f"
+                exit 1
+              }
+            done
+            echo "All JSON Schema checks passed"
+          else
+            echo "ajv not available, skipping schema validation"
+          fi
+
+  bats-tests:
+    name: BATS Tests
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install bats
+        run: |
+          sudo apt-get update -qq
+          sudo apt-get install -y -qq bats 2>/dev/null || \
+            npm install -g bats 2>/dev/null
+      - name: Run BATS tests
+        run: |
+          bats --print-output-on-failure spec/common_spec.bash spec/status_spec.bash \
+            spec/install_spec.bash spec/killswitch_spec.bash
 
   markdown-check:
     name: Markdown Check

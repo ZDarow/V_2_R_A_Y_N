@@ -60,7 +60,8 @@ download_with_retry() {
   local max_retries="${3:-3}"
   local delay="${4:-2}"
   local attempt=0
-  local tmp_dest=$(mktemp "${dest}.XXXXXX")
+  local tmp_dest
+  tmp_dest=$(mktemp "${dest}.XXXXXX")
 
   while [ "$attempt" -lt "$max_retries" ]; do
     attempt=$((attempt + 1))
@@ -101,7 +102,8 @@ download_with_retry() {
 # Возвращает: 0 — OK, 1 — не совпадает, 2 — нет checksum для проверки
 verify_sha256() {
   local data_file="$1" sha_url="$2"
-  local sha_file=$(mktemp "/tmp/$(basename "$data_file").sha256.XXXXXX")
+  local sha_file
+  sha_file=$(mktemp "/tmp/$(basename "$data_file").sha256.XXXXXX")
 
   if ! download_with_retry "$sha_url" "$sha_file" 2 2; then
     rm -f "$sha_file"
@@ -150,6 +152,7 @@ acquire_lock() {
 
   echo "$$" > "$lock_file/pid"
   # Автоматический unlock при выходе
+  # shellcheck disable=SC2064
   trap "release_lock '$lock_name'" EXIT
   return 0
 }
@@ -186,6 +189,7 @@ detect_os_id() {
 # ============================================================================
 # Показывает размер файла в human-readable формате
 file_size() {
+  # shellcheck disable=SC2012
   ls -lh "$1" 2>/dev/null | awk '{print $5}' || echo "?"
 }
 

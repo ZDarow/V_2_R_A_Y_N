@@ -1,0 +1,74 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "https://github.com/ZDarow/V_2_R_A_Y_N/spec/json-schema/routing-rules.json",
+  "title": "v2rayNG Routing Rules",
+  "description": "Схема для конфигурации правил маршрутизации v2rayNG (массив правил)",
+  "type": "array",
+  "items": {
+    "type": "object",
+    "properties": {
+      "domain": {
+        "type": "array",
+        "items": { "type": "string", "pattern": "^geosite:|domain:|regexp:|full:" },
+        "description": "Доменные условия маршрутизации"
+      },
+      "ip": {
+        "type": "array",
+        "items": { "type": "string" },
+        "description": "IP-адреса или geoip:xx"
+      },
+      "port": {
+        "type": "string",
+        "pattern": "^[0-9]+(-[0-9]+)?(,([0-9]+(-[0-9]+)?))*$",
+        "description": "Порт или диапазон портов"
+      },
+      "network": {
+        "type": "string",
+        "enum": ["tcp", "udp", "tcp,udp"],
+        "description": "Тип сети (tcp, udp, tcp,udp)"
+      },
+      "protocol": {
+        "type": "array",
+        "items": { "type": "string" },
+        "description": "Протоколы (например bittorrent)"
+      },
+      "source": {
+        "type": "array",
+        "items": { "type": "string" },
+        "description": "IP-адреса источника"
+      },
+      "outboundTag": {
+        "type": "string",
+        "enum": ["proxy", "direct", "block", "bypass"],
+        "description": "Цель маршрутизации"
+      },
+      "enabled": {
+        "type": "boolean",
+        "description": "Правило активно"
+      },
+      "remarks": {
+        "type": "string",
+        "description": "Описание правила"
+      },
+      "looked": {
+        "type": "boolean",
+        "description": "Пользователь просмотрел правило"
+      },
+      "id": {
+        "type": "string",
+        "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$",
+        "description": "UUID правила (v2rayNG генерирует при импорте)"
+      }
+    },
+    "anyOf": [
+      { "required": ["domain"] },
+      { "required": ["ip"] },
+      { "required": ["protocol"] },
+      { "required": ["port"] },
+      { "required": ["network"] },
+      { "required": ["source"] }
+    ],
+    "required": ["outboundTag", "enabled", "remarks"],
+    "additionalProperties": false
+  }
+}

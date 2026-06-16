@@ -33,6 +33,8 @@
     "servers": [
       "https://dns.google/dns-query",
       "https://cloudflare-dns.com/dns-query",
+      "https://dns.yandex.ru/dns-query",
+      "https://dns.technic.su/dns-query",
       "localhost"
     ],
     "queryStrategy": "UseIP",

@@ -6,11 +6,11 @@ After=network-online.target
 
 [Service]
 Type=oneshot
-ExecStart=%h/.local/share/v2rayN/bin/update-rules.sh
+ExecStart=%h/.local/share/v2rayN/scripts/update-rules.sh
 StandardOutput=journal
 StandardError=journal
 PrivateTmp=true
 NoNewPrivileges=true
-
-[Install]
-WantedBy=default.target
+ProtectSystem=strict
+ProtectHome=read-only
+ReadWritePaths=%h/.local/share/v2rayN %h/.cache/v2rayN

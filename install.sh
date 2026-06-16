@@ -451,8 +451,9 @@ header "Системный сервис и автозапуск"
 # Systemd user service
 if command -v systemctl &>/dev/null; then
   if [ -f "$SCRIPT_DIR/lib/systemd/v2rayn.service" ]; then
-    # Подставляем ExecStart и placeholder'ы
-    sed "s|ExecStart=.*|ExecStart=$HOME/.local/bin/v2rayn|" \
+    # Подставляем ExecStart и placeholder'ы (экранируем $HOME)
+    HOME_ESC=$(printf '%s\n' "$HOME" | sed 's/[&|/]/\\&/g')
+    sed "s|ExecStart=.*|ExecStart=${HOME_ESC}/.local/bin/v2rayn|" \
       "$SCRIPT_DIR/lib/systemd/v2rayn.service" > "$SYSTEMD_USER_DIR/v2rayn.service"
     sed -i "s|%h|$HOME|g; s|%t|${XDG_RUNTIME_DIR:-/run/user/$(id -u)}|g" "$SYSTEMD_USER_DIR/v2rayn.service"
     systemctl --user daemon-reload 2>/dev/null || true

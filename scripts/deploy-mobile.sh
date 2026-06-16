@@ -89,7 +89,7 @@ done
 # ---- 1. Подготовка временной директории ----
 header "Подготовка файлов для Android"
 TMP_DIR=$(mktemp -d)
-trap 'rm -rf "$TMP_DIR"' EXIT
+trap 'rm -rf "$TMP_DIR"' EXIT INT TERM HUP
 
 ANDROID_DIR="$TMP_DIR/assets"
 mkdir -p "$ANDROID_DIR"

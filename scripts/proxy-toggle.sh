@@ -11,6 +11,21 @@ IGNORE_HOSTS="localhost,127.0.0.0/8,::1,*.local,.ru,.su,.xn--p1ai"
 
 case "${1:-status}" in
   on|enable|manual)
+    # Проверка, что v2rayN запущен
+    if ! pgrep -x v2rayn &>/dev/null && ! systemctl --user is-active v2rayn.service &>/dev/null 2>&1; then
+      if command -v systemctl &>/dev/null && systemctl --user start v2rayn.service 2>/dev/null; then
+        echo "v2rayN запущен через systemd"
+        sleep 2
+      else
+        echo "⚠️ v2rayN не запущен. Прокси не будет работать до его запуска."
+      fi
+    fi
+
+    # Проверка порта 10809
+    if command -v ss &>/dev/null && ! ss -tln 2>/dev/null | grep -q ':10809 '; then
+      echo "  ⚠️ Порт 10809 не слушается. v2rayN не готов."
+    fi
+
     if [ -f "$PROXY_SCRIPT" ]; then
       bash "$PROXY_SCRIPT" manual "127.0.0.1" "10809" "$IGNORE_HOSTS"
     else

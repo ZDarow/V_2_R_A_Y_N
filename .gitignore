@@ -1,45 +1,20 @@
-# === Системные ===
+# Kilo Agent
+.kilo/
+
+# Chat logs
+chat-*.txt
+
+# Cloned repos/wikis (for reference)
+v2rayN.wiki/
+v2rayNG.wiki/
+v2rayNG/
+
+# OS files
 .DS_Store
 Thumbs.db
-Desktop.ini
-*~
-*.swp
-*.swo
-*.bak
-*.orig
 
-# === IDE ===
+# IDE
 .vscode/
 .idea/
-*.sublime-*
-.project
-.classpath
-.settings/
-
-# === OS ===
-ehthumbs.db
-Icon?
-._*
-.AppleDouble
-.LSOverride
-Spotlight-V100
-.Trashes
-
-# === v2rayN runtime (создаётся при запуске) ===
-guiNDB.db
-*.db-journal
-*.db-wal
-*.db-shm
-
-# === Временные файлы ===
-/tmp/
-*.tmp
-*.log
-
-# === Правила (загружаются отдельно) ===
-rules/geoip.dat
-rules/geosite.dat
-
-# === Деплой ===
-v2rayNG-mobile-config-*.zip
-deploy-mobile-*/
+*.swp
+*.swo

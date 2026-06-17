@@ -37,8 +37,8 @@ set_gnome_proxy() {
     local PROTOCOLS=("http" "https" "socks")
 
     for PROTOCOL in "${PROTOCOLS[@]}"; do
-      gsettings set org.gnome.system.proxy.$PROTOCOL host "$PROXY_IP"
-      gsettings set org.gnome.system.proxy.$PROTOCOL port "$PROXY_PORT"
+      gsettings set "org.gnome.system.proxy.$PROTOCOL" host "$PROXY_IP"
+      gsettings set "org.gnome.system.proxy.$PROTOCOL" port "$PROXY_PORT"
     done
 
     gsettings set org.gnome.system.proxy ignore-hosts "$(build_gsettings_array "$IGNORE_HOSTS")"

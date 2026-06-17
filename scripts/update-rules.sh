@@ -46,6 +46,7 @@ else
   validate_dat() { [ -f "$1" ] && [ -s "$1" ]; }
   acquire_lock() { return 0; }
   release_lock() { return 0; }
+  # shellcheck disable=SC2012
   file_size() { ls -lh "$1" 2>/dev/null | awk '{print $5}'; }
 fi
 
@@ -59,15 +60,36 @@ SERVICE_FILE="$LIB_DIR/../lib/systemd/${TIMER_NAME}.service"
 TIMER_FILE="$LIB_DIR/../lib/systemd/${TIMER_NAME}.timer"
 
 # ---- Парсинг аргументов ----
+show_help() {
+  cat <<'HELP'
+Использование:
+  ./scripts/update-rules.sh                        # Однократное обновление
+  ./scripts/update-rules.sh --restart-v2rayn       # Обновить + рестарт v2rayN
+  ./scripts/update-rules.sh --install-timer        # Установить systemd timer
+  ./scripts/update-rules.sh --remove-timer         # Удалить systemd timer
+  ./scripts/update-rules.sh --status               # Проверить статус
+  ./scripts/update-rules.sh --help                 # Показать эту справку
+
+Флаги:
+  --install-timer   Установить systemd timer для еженедельного обновления
+  --remove-timer    Удалить systemd timer
+  --status          Показать статус timer и файлов правил
+  --restart-v2rayn  Перезапустить v2rayN после обновления
+  --help            Показать эту справку
+HELP
+  exit 0
+}
+
 ACTION="update"
 RESTART_V2RAYN=false
 while [[ $# -gt 0 ]]; do
   case "$1" in
-    --install-timer)      ACTION="install-timer"      ;;
-    --remove-timer)       ACTION="remove-timer"       ;;
-    --status)             ACTION="status"             ;;
-    --restart-v2rayn|--restart) RESTART_V2RAYN=true   ;;
-    *) ;;
+    --help)               show_help                      ;;
+    --install-timer)      ACTION="install-timer"         ;;
+    --remove-timer)       ACTION="remove-timer"          ;;
+    --status)             ACTION="status"                ;;
+    --restart-v2rayn|--restart) RESTART_V2RAYN=true      ;;
+    *) echo "Неизвестный флаг: $1. Используйте --help для справки." >&2; exit 1 ;;
   esac
   shift
 done
@@ -245,17 +267,20 @@ if [ "$ALL_OK" = true ]; then
   log_info "Обновление завершено успешно."
 
   # Desktop notification
-  command -v notify-send &>/dev/null && \
+  if command -v notify-send &>/dev/null; then
     notify-send -i v2rayN "v2rayN: правила обновлены" \
       "GeoIP/Geosite обновлены успешно" 2>/dev/null || true
+  fi
 
   # Авто-рестарт v2rayN (если запрошено)
   if [ "$RESTART_V2RAYN" = true ]; then
     log_info "Перезапуск v2rayN..."
     if systemctl --user is-active v2rayn.service &>/dev/null 2>&1; then
-      systemctl --user restart v2rayn.service 2>/dev/null && \
-        log_info "  v2rayn.service перезапущен" || \
+      if systemctl --user restart v2rayn.service 2>/dev/null; then
+        log_info "  v2rayn.service перезапущен"
+      else
         log_warn "  Не удалось перезапустить v2rayn.service"
+      fi
     elif command -v pgrep &>/dev/null && pgrep -x v2rayn &>/dev/null; then
       pkill -x v2rayn 2>/dev/null || true
       log_info "  v2rayn остановлен. Запустите заново: v2rayn"

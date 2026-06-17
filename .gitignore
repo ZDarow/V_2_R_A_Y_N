@@ -4,6 +4,9 @@
 # === Chat logs ===
 chat-*.txt
 
+# === CI artifact logs ===
+logs_*
+
 # === Cloned repos/wikis (for reference) ===
 v2rayN.wiki/
 v2rayNG.wiki/

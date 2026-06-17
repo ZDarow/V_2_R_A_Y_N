@@ -97,6 +97,7 @@ mkdir -p "$ANDROID_DIR"
 # ---- 2. Загрузка geoip/geosite ----
 info "Загрузка geoip.dat из runetfreedom (release)..."
 if download_file "$RULES_RELEASE_URL/geoip.dat" "$ANDROID_DIR/geoip.dat"; then
+  # shellcheck disable=SC2012
   info "  geoip.dat: $(ls -lh "$ANDROID_DIR/geoip.dat" | awk '{print $5}')"
 else
   warn "Не удалось загрузить geoip.dat — проверьте соединение"
@@ -104,6 +105,7 @@ fi
 
 info "Загрузка geosite.dat из runetfreedom (release)..."
 if download_file "$RULES_RELEASE_URL/geosite.dat" "$ANDROID_DIR/geosite.dat"; then
+  # shellcheck disable=SC2012
   info "  geosite.dat: $(ls -lh "$ANDROID_DIR/geosite.dat" | awk '{print $5}')"
 else
   warn "Не удалось загрузить geosite.dat — проверьте соединение"
@@ -190,6 +192,7 @@ deploy_zip() {
     local zip_path="$REPO_DIR/$ZIP_NAME"
     mv "$ZIP_NAME" "$zip_path"
     info "Архив создан: $zip_path"
+    # shellcheck disable=SC2012
     info "Размер: $(ls -lh "$zip_path" | awk '{print $5}')"
     echo ""
     echo "  Перенесите архив на телефон и распакуйте в:"

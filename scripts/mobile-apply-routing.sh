@@ -128,8 +128,7 @@ info "JSON: валиден ($(wc -c < "$TEMP_FILE") байт)"
 header "Буфер обмена"
 
 if [ "$HAS_CLIPBOARD" = true ]; then
-  TERMUX_CLIPBOARD_JSON=true termux-clipboard-set "$(cat "$TEMP_FILE")"
-  if [ $? -eq 0 ]; then
+  if TERMUX_CLIPBOARD_JSON=true termux-clipboard-set "$(cat "$TEMP_FILE")"; then
     info "JSON-правила скопированы в буфер обмена!"
     CLIPBOARD_OK=true
   else

@@ -35,6 +35,13 @@
     },
     {
       "type": "field",
+      "protocol": [
+        "bittorrent"
+      ],
+      "outboundTag": "direct"
+    },
+    {
+      "type": "field",
       "network": "udp",
       "port": "50000-65535",
       "outboundTag": "proxy"

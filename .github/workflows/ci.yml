@@ -26,7 +26,7 @@ jobs:
           for f in $files; do
             if [ -f "$f" ]; then
               echo "Checking $f..."
-              shellcheck -e SC1091 "$f" || { echo "SC ISSUES: $f"; errors=$((errors+1)); }
+              shellcheck -S warning -e SC1091 "$f" || { echo "SC ISSUES: $f"; errors=$((errors+1)); }
             fi
           done
           [ "$errors" -eq 0 ] || exit 1

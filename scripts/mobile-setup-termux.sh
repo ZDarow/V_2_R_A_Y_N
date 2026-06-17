@@ -136,6 +136,7 @@ mkdir -p "$TEMP_DIR/assets"
 
 info "Загрузка geoip.dat..."
 if download_file "$RULES_RELEASE_URL/geoip.dat" "$TEMP_DIR/assets/geoip.dat"; then
+  # shellcheck disable=SC2012
   info "  geoip.dat: $(ls -lh "$TEMP_DIR/assets/geoip.dat" | awk '{print $5}')"
 else
   warn "Не удалось загрузить geoip.dat"
@@ -143,6 +144,7 @@ fi
 
 info "Загрузка geosite.dat..."
 if download_file "$RULES_RELEASE_URL/geosite.dat" "$TEMP_DIR/assets/geosite.dat"; then
+  # shellcheck disable=SC2012
   info "  geosite.dat: $(ls -lh "$TEMP_DIR/assets/geosite.dat" | awk '{print $5}')"
 else
   warn "Не удалось загрузить geosite.dat"

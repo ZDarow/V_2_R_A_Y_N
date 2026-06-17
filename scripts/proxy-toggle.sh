@@ -63,8 +63,9 @@ case "${1:-status}" in
         echo "Прокси включён (KDE)"
       fi
     fi
-    command -v notify-send &>/dev/null && \
+    if command -v notify-send &>/dev/null; then
       notify-send -i v2rayN "v2rayN" "Системный прокси включён" 2>/dev/null || true
+    fi
     ;;
   off|disable|none)
     if [ -f "$PROXY_SCRIPT" ]; then
@@ -81,8 +82,9 @@ case "${1:-status}" in
         echo "Прокси выключен (KDE)"
       fi
     fi
-    command -v notify-send &>/dev/null && \
+    if command -v notify-send &>/dev/null; then
       notify-send -i v2rayN "v2rayN" "Системный прокси выключен" 2>/dev/null || true
+    fi
     ;;
   status)
     if command -v gsettings &>/dev/null; then

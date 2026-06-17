@@ -8,6 +8,30 @@ on:
   workflow_dispatch:
 
 jobs:
+  actionlint:
+    name: Actionlint
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install actionlint
+        run: |
+          gh_version=$(curl -s https://api.github.com/repos/rhysd/actionlint/releases/latest | grep tag_name | cut -d'"' -f4)
+          curl -sSL "https://github.com/rhysd/actionlint/releases/download/$gh_version/actionlint_$(echo $gh_version | sed 's/^v//')_linux_amd64.tar.gz" \
+            | tar xz -C /tmp actionlint
+          sudo mv /tmp/actionlint /usr/local/bin/
+      - name: Run actionlint
+        run: actionlint -color
+
+  yamllint:
+    name: Yamllint
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install yamllint
+        run: pip install yamllint 2>/dev/null || sudo apt-get install -y -qq yamllint 2>/dev/null || pip3 install yamllint
+      - name: Run yamllint
+        run: yamllint -c .yamllint.yml .github/workflows/ 2>/dev/null || yamllint .github/workflows/
+
   shellcheck:
     name: Shellcheck
     runs-on: ubuntu-latest
@@ -22,7 +46,8 @@ jobs:
             scripts/proxy-toggle.sh scripts/proxy_set_linux_sh.sh \
             scripts/deploy-mobile.sh scripts/generate-mobile-url.sh \
             scripts/mobile-setup-termux.sh scripts/mobile-apply-routing.sh \
-            scripts/status.sh scripts/diagnose.sh scripts/kill-switch.sh"
+            scripts/status.sh scripts/diagnose.sh scripts/kill-switch.sh \
+            scripts/migrate-allowinsecure.sh"
           for f in $files; do
             if [ -f "$f" ]; then
               echo "Checking $f..."
@@ -46,7 +71,8 @@ jobs:
             scripts/proxy_set_linux_sh.sh scripts/deploy-mobile.sh \
             scripts/generate-mobile-url.sh scripts/mobile-setup-termux.sh \
             scripts/mobile-apply-routing.sh \
-            scripts/status.sh scripts/diagnose.sh scripts/kill-switch.sh
+            scripts/status.sh scripts/diagnose.sh scripts/kill-switch.sh \
+            scripts/migrate-allowinsecure.sh
           do
             if [ -f "$f" ]; then
               echo "Checking $f..."

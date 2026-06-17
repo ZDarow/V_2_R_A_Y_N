@@ -1,7 +1,12 @@
 {
-  "_warning": "⚠️ Xray-core ОТКЛЮЧАЕТ allowInsecure с 1 августа 2026.",
-  "_fix": "В настройках подписки v2rayN: ✏️ → Отпечаток сертификата → Вкл (pinnedPeerCertSha256)",
-  "_example_pinned": "'pinnedPeerCertSha256': ['SHA256-отпечаток сертификата вашего сервера'] — получите из v2rayNG/лога подключения",
+  "_warning_allowInsecure": "🔴 Xray-core v26.2.6+ (2026-02) и v2rayNG 2.2.3+ УЖЕ УДАЛИЛИ allowInsecure.",
+  "_fix_allowInsecure": "Замените allowInsecure: true на pinnedPeerCertSha256. Два формата: hex ('ae24...77') или OpenSSL ('AE:24:...:77').",
+  "_fix_intermediate_ca": "Для Let's Encrypt лучше фиксировать промежуточный CA (меняется раз в 2+ года), а не leaf-сертификат (90 дней).",
+  "_fix_hysteria": "⚠️ Hysteria/Hysteria2 (UDP): openssl s_client НЕ РАБОТАЕТ. Получите SHA256 из файла сертификата на сервере.",
+  "_pinned_formats": {
+    "hex": "ae243d668ec9c7f74a0dcd1ad21c6676b4efe30c39728934b362093af886bf77",
+    "openssl": "AE:24:3D:66:8E:C9:C7:F7:4A:0D:CD:1A:D2:1C:66:76:B4:EF:E3:0C:39:72:89:34:B3:62:09:3A:F8:86:BF:77"
+  },
   "_policy_comments": {
     "handshake": "4с — таймаут рукопожатия TLS (баланс скорости и надёжности)",
     "connIdle": "120с — время простоя до закрытия соединения (экономия памяти)",

@@ -1,4 +1,5 @@
 {
+  "_comment_dns_ips": "Публичные DNS-резолверы (Google, Cloudflare) — направляются через прокси, чтобы DoH-запросы не блокировались провайдером. Если используете другие DNS — замените IP-адреса в правиле ниже.",
   "domainStrategy": "IPIfNonMatch",
   "domainMatcher": "hybrid",
   "rules": [

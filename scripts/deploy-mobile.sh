@@ -1,4 +1,5 @@
 #!/bin/bash
+# shellcheck disable=SC2120
 set -euo pipefail
 
 # v2rayNG Mobile Config Deployer — пакет конфигов для Android-клиента
@@ -10,6 +11,7 @@ set -euo pipefail
 #   ./deploy-mobile.sh --server                # HTTP-сервер для WiFi-передачи
 #   ./deploy-mobile.sh --rules-only            # Только geoip/geosite (без конфигов)
 #   ./deploy-mobile.sh --help                  # Справка
+#   ./deploy-mobile.sh --https                 # HTTPS-сервер с самоподписанным сертификатом
 #
 # Назначение:
 #   Автоматизирует перенос geoip.dat, geosite.dat, routing-russia.json,
@@ -19,7 +21,13 @@ set -euo pipefail
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 REPO_DIR="$(dirname "$SCRIPT_DIR")"
-RULES_RELEASE_URL="https://raw.githubusercontent.com/runetfreedom/russia-v2ray-rules-dat/release"
+# Зеркала для geoip/geosite (runetfreedom/russia-v2ray-rules-dat)
+RULES_RELEASE_URLS=(
+  "https://raw.githubusercontent.com/runetfreedom/russia-v2ray-rules-dat/release"
+  "https://gitlab.com/runetfreedom/russia-v2ray-rules-dat/-/raw/release"
+  "https://codeberg.org/runetfreedom/russia-v2ray-rules-dat/raw/branch/release"
+)
+
 
 # Целевая директория на Android
 ANDROID_ASSETS="Android/data/com.v2ray.ang/files/assets"
@@ -56,6 +64,7 @@ show_help() {
   echo "  --zip           Создать ZIP-архив deploy-mobile-config.zip"
   echo "  --adb           Push на Android через ADB (требуется adb + устройство)"
   echo "  --server        Запустить HTTP-сервер (:8080) для WiFi-передачи"
+  echo "  --https         Запустить HTTPS-сервер (:8443) с самоподписанным сертификатом"
   echo "  --rules-only    Только geoip/geosite (без config JSON)"
   echo "  --apply         Открыть v2rayNG на телефоне после --adb (через am start)"
   echo "  --help          Показать эту справку"
@@ -65,6 +74,7 @@ show_help() {
   echo "  $0 --adb                          # Push через USB"
   echo "  $0 --adb --apply                  # Push + авто-открытие v2rayNG"
   echo "  $0 --server                       # Сервер на порту 8080"
+  echo "  $0 --https                        # HTTPS-сервер на порту 8443"
   echo "  $0 --adb --rules-only             # Только правила на телефон"
   exit 0
 }
@@ -79,6 +89,7 @@ while [[ $# -gt 0 ]]; do
     --zip) MODE="zip" ;;
     --adb) MODE="adb" ;;
     --server) MODE="server" ;;
+    --https) MODE="https" ;;
     --rules-only) RULES_ONLY=true ;;
     --apply) APPLY=true ;;
     *) warn "Неизвестный флаг: $1 (используйте --help для списка)"; shift ;;
@@ -103,21 +114,34 @@ trap 'rm -rf "$TMP_DIR"' EXIT INT TERM HUP
 ANDROID_DIR="$TMP_DIR/assets"
 mkdir -p "$ANDROID_DIR"
 
-# ---- 2. Загрузка geoip/geosite ----
-info "Загрузка geoip.dat из runetfreedom (release)..."
-if download_file "$RULES_RELEASE_URL/geoip.dat" "$ANDROID_DIR/geoip.dat"; then
+# ---- 2. Загрузка geoip/geosite (с авто-переключением зеркал) ----
+download_with_mirrors() {
+  local name="$1" dest="$2"
+  for base_url in "${RULES_RELEASE_URLS[@]}"; do
+    local url="$base_url/$name"
+    info "  Попытка: $base_url"
+    if download_file "$url" "$dest"; then
+      info "  $name: загружен ($(ls -lh "$dest" | awk '{print $5}'))"
+      return 0
+    fi
+  done
+  return 1
+}
+
+info "Загрузка geoip.dat..."
+if download_with_mirrors "geoip.dat" "$ANDROID_DIR/geoip.dat"; then
   # shellcheck disable=SC2012
   info "  geoip.dat: $(ls -lh "$ANDROID_DIR/geoip.dat" | awk '{print $5}')"
 else
-  warn "Не удалось загрузить geoip.dat — проверьте соединение"
+  warn "Не удалось загрузить geoip.dat ни с одного зеркала"
 fi
 
-info "Загрузка geosite.dat из runetfreedom (release)..."
-if download_file "$RULES_RELEASE_URL/geosite.dat" "$ANDROID_DIR/geosite.dat"; then
+info "Загрузка geosite.dat..."
+if download_with_mirrors "geosite.dat" "$ANDROID_DIR/geosite.dat"; then
   # shellcheck disable=SC2012
   info "  geosite.dat: $(ls -lh "$ANDROID_DIR/geosite.dat" | awk '{print $5}')"
 else
-  warn "Не удалось загрузить geosite.dat — проверьте соединение"
+  warn "Не удалось загрузить geosite.dat ни с одного зеркала"
 fi
 
 # Валидация .dat
@@ -285,17 +309,15 @@ deploy_adb() {
   fi
 }
 
-# shellcheck disable=SC2120
-deploy_server() {
-  header "HTTP-сервер для WiFi-передачи"
+# ---- HTTP/HTTPS серверы ----
+deploy_http() {
   local PORT="${1:-8080}"
 
-  if ! command -v python3 &>/dev/null; then
-    error "python3 не найден. Нужен для HTTP-сервера."
-  fi
+  warn "⚠ HTTP трафик не шифрован. Не используйте этот режим в публичных WiFi-сетях."
+  warn "  Используйте --https для шифрованного соединения."
 
   local ip
-  ip=$(ip route get 1 2>/dev/null | awk '{print $7; exit}' || hostname -I 2>/dev/null | awk '{print $1}' || echo "127.0.0.1")
+  ip=$(get_ip)
 
   echo ""
   echo "  Сервер запущен на http://${ip}:${PORT}"
@@ -311,6 +333,67 @@ deploy_server() {
   python3 -m http.server "$PORT"
 }
 
+deploy_https() {
+  local PORT="${1:-8443}"
+
+  if ! command -v openssl &>/dev/null; then
+    error "openssl не найден. Установите: sudo apt-get install openssl"
+  fi
+
+  local ip
+  ip=$(get_ip)
+
+  # Генерация самоподписанного сертификата
+  local cert_dir="/tmp/v2rayn-https.$$"
+  mkdir -p "$cert_dir"
+  local cert_key="$cert_dir/server.key"
+  local cert_crt="$cert_dir/server.crt"
+
+  openssl req -x509 -newkey rsa:2048 -keyout "$cert_key" -out "$cert_crt" \
+    -days 7 -nodes -subj "/CN=${ip}/O=v2rayN-Mobile/OU=Deploy" 2>/dev/null
+
+  info "Самоподписанный сертификат создан (действителен 7 дней)"
+  info "  CN=${ip}"
+
+  # Python HTTPS-сервер с self-signed сертификатом
+  cat > "$cert_dir/https_server.py" <<'PYEOF'
+import http.server, ssl, sys, os
+
+PORT = int(sys.argv[1]) if len(sys.argv) > 1 else 8443
+DIR = sys.argv[2] if len(sys.argv) > 2 else '.'
+KEY = sys.argv[3] if len(sys.argv) > 3 else 'server.key'
+CERT = sys.argv[4] if len(sys.argv) > 4 else 'server.crt'
+
+os.chdir(DIR)
+httpd = http.server.HTTPServer(('0.0.0.0', PORT), http.server.SimpleHTTPRequestHandler)
+ctx = ssl.SSLContext(ssl.PROTOCOL_TLS_SERVER)
+ctx.load_cert_chain(CERT, KEY)
+httpd.socket = ctx.wrap_socket(httpd.socket, server_side=True)
+httpd.serve_forever()
+PYEOF
+
+  echo ""
+  echo "  HTTPS-сервер запущен на https://${ip}:${PORT}"
+  echo ""
+  echo "  ВАЖНО: Сертификат самоподписанный — браузер покажет предупреждение."
+  echo "  На телефоне нажмите «Дополнительно» → «Перейти на сайт»."
+  echo ""
+  echo "  На телефоне откройте: https://${ip}:${PORT}"
+  echo "  Скачайте ZIP-архив или отдельные файлы."
+  echo ""
+  echo "  Нажмите Ctrl+C для остановки сервера."
+  echo ""
+
+  cd "$TMP_DIR"
+  python3 "$cert_dir/https_server.py" "$PORT" "$TMP_DIR" "$cert_key" "$cert_crt"
+}
+
+get_ip() {
+  ip route get 1 2>/dev/null | awk '{print $7; exit}' || \
+    hostname -I 2>/dev/null | awk '{print $1}' || \
+    echo "127.0.0.1"
+}
+
 # ---- 5. Выполнение ----
 case "$MODE" in
   zip)
@@ -320,22 +403,27 @@ case "$MODE" in
     deploy_adb
     ;;
   server)
-    deploy_server
+    deploy_http
+    ;;
+  https)
+    deploy_https
     ;;
   "")
     # Интерактивный режим
     header "Выберите способ деплоя"
     echo "  1) ZIP-архив (перенос вручную)"
     echo "  2) ADB push (USB-отладка)"
-    echo "  3) HTTP-сервер (WiFi-передача)"
-    echo "  4) Выход"
+    echo "  3) HTTP-сервер (WiFi-передача ⚠ не шифрован)"
+    echo "  4) HTTPS-сервер (самоподписанный сертификат)"
+    echo "  5) Выход"
     echo ""
-    read -r -t 30 -n 1 -p "Выбор [1-4]: " choice
+    read -r -t 30 -n 1 -p "Выбор [1-5]: " choice
     echo ""
-    case "${choice:-4}" in
+    case "${choice:-5}" in
       1) deploy_zip ;;
       2) deploy_adb ;;
-      3) deploy_server ;;
+      3) deploy_http ;;
+      4) deploy_https ;;
       *) echo "Выход."; exit 0 ;;
     esac
     ;;

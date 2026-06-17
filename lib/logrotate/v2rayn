@@ -1,0 +1,18 @@
+# Logrotate config for v2rayN logs
+# Установка:
+#   sudo cp lib/logrotate/v2rayn /etc/logrotate.d/v2rayn
+#   sudo logrotate -d /etc/logrotate.d/v2rayn  # dry-run тест
+#
+# Логи: ~/.local/share/v2rayN/logs/*.log
+# Ротация: еженедельно, хранить 4 недели, сжимать
+
+"$HOME/.local/share/v2rayN/logs/*.log" {
+    weekly
+    rotate 4
+    compress
+    delaycompress
+    missingok
+    notifempty
+    create 0640
+    maxsize 10M
+}

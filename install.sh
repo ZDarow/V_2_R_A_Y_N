@@ -9,7 +9,14 @@ set -euo pipefail
 #   ./install.sh [--force-reinstall] [--skip-v2rayn] [--repo-url <url>]
 
 REPO_URL="${REPO_URL:-https://github.com/ZDarow/V_2_R_A_Y_N.git}"
-RULES_RELEASE_URL="https://raw.githubusercontent.com/runetfreedom/russia-v2ray-rules-dat/release"
+
+# Зеркала для geoip/geosite (runetfreedom/russia-v2ray-rules-dat)
+RULES_RELEASE_URLS=(
+  "https://raw.githubusercontent.com/runetfreedom/russia-v2ray-rules-dat/release"
+  "https://gitlab.com/runetfreedom/russia-v2ray-rules-dat/-/raw/release"
+  "https://codeberg.org/runetfreedom/russia-v2ray-rules-dat/raw/branch/release"
+)
+
 
 # ---- Валидация REPO_URL ----
 if ! [[ "$REPO_URL" =~ ^https://github\.com/[^/]+/[^/]+(\.git)?$ ]]; then
@@ -84,6 +91,7 @@ run() {
 # ---- Парсинг аргументов ----
 FORCE_REINSTALL=false
 SKIP_V2RAYN=false
+SUBSCRIPTIONS_MODE="all"  # all | interactive
 show_help() {
   echo "v2rayN Russia Setup — полностью автоматизированный установщик"
   echo ""
@@ -98,6 +106,14 @@ show_help() {
   echo "  --skip-v2rayn       Не устанавливать v2rayN (только конфиги и подписки)"
   echo "  --repo-url <url>    URL репозитория (по умолчанию: ZDarow/V_2_R_A_Y_N)"
   echo "  --kill-switch       Включить kill-switch (iptables) после установки"
+  echo "  --subscriptions     Интерактивный выбор подписок для импорта"
+  echo ""
+  echo "  Перед установкой скрипт запросит sudo для:"
+  echo "    • apt-get/dnf/pacman — установка пакетов"
+  echo "    • dpkg — установка .NET Runtime"
+  echo "    • установка v2rayN в /opt/"
+  echo "    • iptables — kill-switch (только с --kill-switch)"
+  echo "    Подробнее: docs/install.md#безопасность"
   exit 0
 }
 while [[ $# -gt 0 ]]; do
@@ -108,6 +124,7 @@ while [[ $# -gt 0 ]]; do
     --skip-v2rayn) SKIP_V2RAYN=true; shift ;;
     --repo-url) REPO_URL="$2"; shift 2 ;;
     --kill-switch) KILL_SWITCH=true; shift ;;
+    --subscriptions) SUBSCRIPTIONS_MODE="interactive"; shift ;;
     *) warn "Неизвестный флаг: $1 (используйте --help для списка)"; shift ;;
   esac
 done
@@ -292,49 +309,57 @@ run mkdir -p "$CACHE_DIR"
 
 install_rule_file() {
   local name="$1"
-  local url="$RULES_RELEASE_URL/$name"
-  local sha_url="${url}.sha256"
   local dest="$V2RAYN_BIN_DIR/$name"
   local cache="$CACHE_DIR/$name"
-  local tmp_file="/tmp/${name}.$$"
 
   if [ "$DRY_RUN" = true ]; then
     echo "  [DRY-RUN] Загрузка $name + SHA256 проверка + установка в $dest"
     return 0
   fi
 
-  if download_with_retry "$url" "$tmp_file" 3 2; then
-    local sha_ok=2
-    if declare -f verify_sha256 &>/dev/null; then
-      verify_sha256 "$tmp_file" "$sha_url" && sha_ok=0 || sha_ok=$?
-    fi
+  local downloaded=false
+  for base_url in "${RULES_RELEASE_URLS[@]}"; do
+    local url="$base_url/$name"
+    local sha_url="${url}.sha256"
+    local tmp_file
+    tmp_file="/tmp/${name}.$$.$(echo "$base_url" | md5sum 2>/dev/null | cut -c1-8 || echo "$RANDOM")"
 
-    if [ "$sha_ok" -eq 0 ] || [ "$sha_ok" -eq 2 ]; then
-      run cp -f "$tmp_file" "$cache"
-      run mv -f "$tmp_file" "$dest"
-      # shellcheck disable=SC2012
-      info "$name: установлен ($(ls -lh "$dest" | awk '{print $5}'))"
-      return 0
+    info "  Попытка: $base_url"
+    if download_with_retry "$url" "$tmp_file" 2 2; then
+      local sha_ok=2
+      if declare -f verify_sha256 &>/dev/null; then
+        verify_sha256 "$tmp_file" "$sha_url" && sha_ok=0 || sha_ok=$?
+      fi
+
+      if [ "$sha_ok" -eq 0 ] || [ "$sha_ok" -eq 2 ]; then
+        run cp -f "$tmp_file" "$cache"
+        run mv -f "$tmp_file" "$dest"
+        # shellcheck disable=SC2012
+        info "$name: установлен ($(ls -lh "$dest" | awk '{print $5}'))"
+        downloaded=true
+        break
+      else
+        warn "$name: SHA256 не совпал на $base_url. Пробую следующее зеркало."
+        run rm -f "$tmp_file"
+      fi
     else
-      warn "$name: SHA256 не совпал. Пробую кэш."
+      warn "$name: зеркало $base_url недоступно. Пробую следующее..."
       run rm -f "$tmp_file"
     fi
-  else
-    warn "$name: не удалось скачать. Пробую кэш."
-    run rm -f "$tmp_file"
-  fi
+  done
 
-  if [ -f "$cache" ] && validate_dat "$cache"; then
-    if [ "$DRY_RUN" = true ]; then
-      echo "  [DRY-RUN] Восстановление $name из кэша"
-    else
-      run cp -f "$cache" "$dest"
-      info "$name: восстановлен из кэша"
-    fi
+  if [ "$downloaded" = true ]; then
     return 0
   fi
 
-  warn "$name: не установлен (ни загрузка, ни кэш)"
+  # Fallback: кэш
+  if [ -f "$cache" ] && validate_dat "$cache"; then
+    run cp -f "$cache" "$dest"
+    info "$name: восстановлен из кэша"
+    return 0
+  fi
+
+  warn "$name: не установлен (ни одно зеркало, ни кэш)"
   return 1
 }
 
@@ -370,8 +395,9 @@ copy_config "$SCRIPT_DIR/config/only_blocked.json" "$V2RAYN_CONFIG_DIR/only_bloc
 copy_config "$SCRIPT_DIR/config/v2rayng-routing-russia.json" "$V2RAYN_CONFIG_DIR/v2rayng-routing-russia.json" "v2rayng-routing-russia.json (v2rayNG формат)"
 copy_config "$SCRIPT_DIR/config/v2rayng-only-blocked.json" "$V2RAYN_CONFIG_DIR/v2rayng-only-blocked.json" "v2rayng-only-blocked.json (v2rayNG формат)"
 # Предупреждение о allowInsecure
-info "⚠️  ВНИМАНИЕ: Xray отключит параметр allowInsecure с 1 августа 2026."
-info "   Используйте verifyPeerCertByName в настройках подписки v2rayN."
+info "⚠️  ВНИМАНИЕ: Xray-core ОТКЛЮЧИТ allowInsecure с 1 августа 2026."
+info "   Используйте «Отпечаток сертификата» (pinnedPeerCertSha256) в настройках подписки."
+info "   Проверка существующих конфигов: ~/.local/share/v2rayN/scripts/migrate-allowinsecure.sh"
 
 # ---- 7. Скрипты управления + авто-обновление ----
 header "Установка скриптов управления"
@@ -379,7 +405,7 @@ V2RAYN_SCRIPTS_DIR="$HOME/.local/share/v2rayN/scripts"
 run mkdir -p "$V2RAYN_SCRIPTS_DIR"
 
 # Утилитарные скрипты
-for script in proxy-toggle.sh proxy_set_linux_sh.sh update-rules.sh status.sh diagnose.sh kill-switch.sh; do
+for script in proxy-toggle.sh proxy_set_linux_sh.sh update-rules.sh status.sh diagnose.sh kill-switch.sh migrate-allowinsecure.sh; do
   local_src="$SCRIPT_DIR/scripts/$script"
   if [ -f "$local_src" ]; then
     run cp -f "$local_src" "$V2RAYN_SCRIPTS_DIR/$script"
@@ -424,9 +450,37 @@ fi
 # ---- 8. Импорт подписок в БД v2rayN ----
 header "Импорт подписок в v2rayN"
 DB_PATH="$V2RAYN_GUICONFIG_DIR/guiNDB.db"
-if command -v sqlite3 &>/dev/null; then
+
+# Определение всех доступных подписок
+declare -A SUBSCRIPTIONS
+SUBSCRIPTIONS["BLACK-RUS-001"]="Чёрные списки РФ — весь трафик через VPN (igareck)"
+SUBSCRIPTIONS["WHITE-RUS-001"]="Белые списки РФ — только РФ через VPN (igareck)"
+SUBSCRIPTIONS["WL-ZIENG2-001"]="WL Белый список (zieng2) — для REALITY"
+SUBSCRIPTIONS["WHITELIST-IPS-001"]="Whitelist IP (hxehex) — CIDR для мобильных"
+
+if [ "$SUBSCRIPTIONS_MODE" = "interactive" ] && [ -t 0 ] && [ -t 1 ]; then
+  info "Выберите подписки для импорта (по умолчанию — все):"
+  SELECTED_SUBS=()
+  for id in "${!SUBSCRIPTIONS[@]}"; do
+    echo -n "  Импортировать «${SUBSCRIPTIONS[$id]}»? [Y/n] "
+    read -r -t 10 ans || true
+    case "${ans,,}" in
+      n|no) ;;
+      *) SELECTED_SUBS+=("$id") ;;
+    esac
+  done
+  if [ "${#SELECTED_SUBS[@]}" -eq 0 ]; then
+    warn "Не выбрано ни одной подписки. Импорт пропущен."
+  else
+    info "Выбрано ${#SELECTED_SUBS[@]} подписки(ок)"
+  fi
+else
+  SELECTED_SUBS=("${!SUBSCRIPTIONS[@]}")
+fi
+
+if command -v sqlite3 &>/dev/null && [ "${#SELECTED_SUBS[@]}" -gt 0 ]; then
   if [ "$DRY_RUN" = true ]; then
-    echo "  [DRY-RUN] Импорт подписок в БД v2rayN (sqlite3)"
+    echo "  [DRY-RUN] Импорт ${#SELECTED_SUBS[@]} подписок в БД v2rayN (sqlite3)"
   else
     sqlite3 "$DB_PATH" "CREATE TABLE IF NOT EXISTS SubItem (
       Id TEXT PRIMARY KEY,
@@ -444,34 +498,42 @@ if command -v sqlite3 &>/dev/null; then
       LastUpdateTime INTEGER DEFAULT 0
     );" 2>/dev/null || true
 
-    sqlite3 "$DB_PATH" <<'SQL' 2>/dev/null || warn "Не удалось импортировать подписки в БД"
-INSERT OR IGNORE INTO SubItem (Id, Remarks, Url, MoreUrl, Enabled, Sort, AutoUpdateInterval, ConvertTarget)
-VALUES
-  ('BLACK-RUS-001', 'Чёрные списки РФ (весь трафик через VPN)',
-   'https://raw.githubusercontent.com/igareck/vpn-configs-for-russia/refs/heads/main/BLACK_VLESS_RUS_mobile.txt',
-   'https://raw.githubusercontent.com/igareck/vpn-configs-for-russia/refs/heads/main/BLACK_VLESS_RUS.txt
-https://raw.githubusercontent.com/igareck/vpn-configs-for-russia/refs/heads/main/BLACK_SS+All_RUS.txt',
-   1, 1, 1440, 'v2ray'),
-  ('WHITE-RUS-001', 'Белые списки РФ (только РФ через VPN)',
-   'https://raw.githubusercontent.com/igareck/vpn-configs-for-russia/refs/heads/main/Vless-Reality-White-Lists-Rus-Mobile.txt',
-   'https://raw.githubusercontent.com/igareck/vpn-configs-for-russia/refs/heads/main/Vless-Reality-White-Lists-Rus-Mobile-2.txt
-https://raw.githubusercontent.com/igareck/vpn-configs-for-russia/refs/heads/main/WHITE-CIDR-RU-all.txt
-https://raw.githubusercontent.com/igareck/vpn-configs-for-russia/refs/heads/main/WHITE-CIDR-RU-checked.txt
-https://raw.githubusercontent.com/igareck/vpn-configs-for-russia/refs/heads/main/WHITE-SNI-RU-all.txt',
-   1, 2, 1440, 'v2ray'),
-  ('WL-ZIENG2-001', 'WL Белый список (zieng2)',
-   'https://raw.githubusercontent.com/zieng2/wl/main/vless_universal.txt',
-   'https://codeberg.org/zieng2/wl/raw/branch/main/vless_universal.txt',
-   1, 3, 60, 'v2ray'),
-  ('WHITELIST-IPS-001', 'Whitelist IP (hxehex) — CIDR для мобильных',
-   'https://raw.githubusercontent.com/hxehex/russia-mobile-internet-whitelist/main/cidrwhitelist.txt',
-   'https://raw.githubusercontent.com/hxehex/russia-mobile-internet-whitelist/main/ipwhitelist.txt
-https://raw.githubusercontent.com/hxehex/russia-mobile-internet-whitelist/main/whitelist.txt',
-   1, 4, 60, 'v2ray');
-SQL
+    for sub_id in "${SELECTED_SUBS[@]}"; do
+      case "$sub_id" in
+        BLACK-RUS-001)
+          sqlite3 "$DB_PATH" "INSERT OR IGNORE INTO SubItem (Id, Remarks, Url, MoreUrl, Enabled, Sort, AutoUpdateInterval, ConvertTarget)
+            VALUES ('BLACK-RUS-001', 'Чёрные списки РФ (весь трафик через VPN)',
+              'https://raw.githubusercontent.com/igareck/vpn-configs-for-russia/refs/heads/main/BLACK_VLESS_RUS_mobile.txt',
+              'https://raw.githubusercontent.com/igareck/vpn-configs-for-russia/refs/heads/main/BLACK_VLESS_RUS.txt
+          https://raw.githubusercontent.com/igareck/vpn-configs-for-russia/refs/heads/main/BLACK_SS+All_RUS.txt',
+              1, 1, 1440, 'v2ray');" 2>/dev/null || warn "  BLACK-RUS-001: ошибка импорта" ;;
+        WHITE-RUS-001)
+          sqlite3 "$DB_PATH" "INSERT OR IGNORE INTO SubItem (Id, Remarks, Url, MoreUrl, Enabled, Sort, AutoUpdateInterval, ConvertTarget)
+            VALUES ('WHITE-RUS-001', 'Белые списки РФ (только РФ через VPN)',
+              'https://raw.githubusercontent.com/igareck/vpn-configs-for-russia/refs/heads/main/Vless-Reality-White-Lists-Rus-Mobile.txt',
+              'https://raw.githubusercontent.com/igareck/vpn-configs-for-russia/refs/heads/main/Vless-Reality-White-Lists-Rus-Mobile-2.txt
+          https://raw.githubusercontent.com/igareck/vpn-configs-for-russia/refs/heads/main/WHITE-CIDR-RU-all.txt
+          https://raw.githubusercontent.com/igareck/vpn-configs-for-russia/refs/heads/main/WHITE-CIDR-RU-checked.txt
+          https://raw.githubusercontent.com/igareck/vpn-configs-for-russia/refs/heads/main/WHITE-SNI-RU-all.txt',
+              1, 2, 1440, 'v2ray');" 2>/dev/null || warn "  WHITE-RUS-001: ошибка импорта" ;;
+        WL-ZIENG2-001)
+          sqlite3 "$DB_PATH" "INSERT OR IGNORE INTO SubItem (Id, Remarks, Url, MoreUrl, Enabled, Sort, AutoUpdateInterval, ConvertTarget)
+            VALUES ('WL-ZIENG2-001', 'WL Белый список (zieng2)',
+              'https://raw.githubusercontent.com/zieng2/wl/main/vless_universal.txt',
+              'https://codeberg.org/zieng2/wl/raw/branch/main/vless_universal.txt',
+              1, 3, 60, 'v2ray');" 2>/dev/null || warn "  WL-ZIENG2-001: ошибка импорта" ;;
+        WHITELIST-IPS-001)
+          sqlite3 "$DB_PATH" "INSERT OR IGNORE INTO SubItem (Id, Remarks, Url, MoreUrl, Enabled, Sort, AutoUpdateInterval, ConvertTarget)
+            VALUES ('WHITELIST-IPS-001', 'Whitelist IP (hxehex) — CIDR для мобильных',
+              'https://raw.githubusercontent.com/hxehex/russia-mobile-internet-whitelist/main/cidrwhitelist.txt',
+              'https://raw.githubusercontent.com/hxehex/russia-mobile-internet-whitelist/main/ipwhitelist.txt
+          https://raw.githubusercontent.com/hxehex/russia-mobile-internet-whitelist/main/whitelist.txt',
+              1, 4, 60, 'v2ray');" 2>/dev/null || warn "  WHITELIST-IPS-001: ошибка импорта" ;;
+      esac
+    done
     info "Подписки импортированы в БД v2rayN"
   fi
-else
+elif [ "$DRY_RUN" = false ]; then
   warn "sqlite3 не найден. Подписки не импортированы (можно импортировать вручную в GUI)."
 fi
 

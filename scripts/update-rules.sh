@@ -51,7 +51,13 @@ else
 fi
 
 # ---- Константы ----
-RELEASE_URL="https://raw.githubusercontent.com/runetfreedom/russia-v2ray-rules-dat/release"
+# Основной источник и зеркала для geoip/geosite
+RELEASE_URLS=(
+  "https://raw.githubusercontent.com/runetfreedom/russia-v2ray-rules-dat/release"
+  "https://gitlab.com/runetfreedom/russia-v2ray-rules-dat/-/raw/release"
+  "https://codeberg.org/runetfreedom/russia-v2ray-rules-dat/raw/branch/release"
+)
+
 BIN_DIR="${V2RAYN_BIN_DIR:-$HOME/.local/share/v2rayN/bin}"
 CACHE_DIR="$HOME/.cache/v2rayN/rules"
 SYSTEMD_DIR="$HOME/.config/systemd/user"
@@ -194,46 +200,64 @@ fi
 # Retry-загрузка + SHA256 проверка
 update_file() {
   local name="$1"
-  local url="$RELEASE_URL/$name"
-  local sha_url="${url}.sha256"
   local dest="$BIN_DIR/$name"
   local cache="$CACHE_DIR/$name"
 
   log_info "Загрузка $name ..."
 
-  # Пробуем скачать во временный файл
   local tmp_file
   tmp_file=$(mktemp "/tmp/${name}.XXXXXX")
   chmod 600 "$tmp_file"
-  if download_with_retry "$url" "$tmp_file" 3 2; then
-    log_info "  Скачан: $(file_size "$tmp_file")"
 
-    # Проверка SHA256
-    local sha_ok=2  # 2 = нет checksum файла
-    if declare -f verify_sha256 &>/dev/null; then
-      verify_sha256 "$tmp_file" "$sha_url" && sha_ok=0 || sha_ok=$?
-    fi
+  local downloaded=false
 
-    if [ "$sha_ok" -eq 0 ]; then
-      # SHA256 совпал — устанавливаем
-      cp -f "$tmp_file" "$cache"
-      mv -f "$tmp_file" "$dest"
-      log_info "  $name: установлен (SHA256 OK)"
-      return 0
-    elif [ "$sha_ok" -eq 2 ]; then
-      # Нет checksum файла — устанавливаем с предупреждением
-      cp -f "$tmp_file" "$cache"
-      mv -f "$tmp_file" "$dest"
-      log_info "  $name: установлен (без SHA256 проверки)"
-      return 0
+  # Пробуем каждый зеркальный URL по порядку
+  for base_url in "${RELEASE_URLS[@]}"; do
+    local url="$base_url/$name"
+    local sha_url="${url}.sha256"
+
+    log_info "  Попытка: $base_url"
+
+    if download_with_retry "$url" "$tmp_file" 2 2; then
+      log_info "  Скачан: $(file_size "$tmp_file")"
+
+      # Проверка SHA256
+      local sha_ok=2  # 2 = нет checksum файла
+      if declare -f verify_sha256 &>/dev/null; then
+        verify_sha256 "$tmp_file" "$sha_url" && sha_ok=0 || sha_ok=$?
+      fi
+
+      if [ "$sha_ok" -eq 0 ]; then
+        # SHA256 совпал — устанавливаем
+        cp -f "$tmp_file" "$cache"
+        mv -f "$tmp_file" "$dest"
+        log_info "  $name: установлен (SHA256 OK, зеркало: $base_url)"
+        downloaded=true
+        break
+      elif [ "$sha_ok" -eq 2 ]; then
+        # Нет checksum файла — устанавливаем с предупреждением
+        cp -f "$tmp_file" "$cache"
+        mv -f "$tmp_file" "$dest"
+        log_info "  $name: установлен (без SHA256 проверки, зеркало: $base_url)"
+        downloaded=true
+        break
+      else
+        # SHA256 не совпал — пробуем следующее зеркало
+        log_warn "  $name: SHA256 не совпал на $base_url. Пробую следующее зеркало."
+        rm -f "$tmp_file"
+        tmp_file=$(mktemp "/tmp/${name}.XXXXXX")
+        chmod 600 "$tmp_file"
+      fi
     else
-      # SHA256 не совпал
-      log_warn "  $name: SHA256 не совпал. Использую кэшированную версию."
+      log_warn "  $name: зеркало $base_url недоступно. Пробую следующее..."
       rm -f "$tmp_file"
+      tmp_file=$(mktemp "/tmp/${name}.XXXXXX")
+      chmod 600 "$tmp_file"
     fi
-  else
-    log_warn "  $name: не удалось скачать после 3 попыток"
-    rm -f "$tmp_file"
+  done
+
+  if [ "$downloaded" = true ]; then
+    return 0
   fi
 
   # Fallback: кэш

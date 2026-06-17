@@ -1,0 +1,75 @@
+name: Release
+
+on:
+  push:
+    tags:
+      - 'v*'  # v1.0.0, v2.3.4-alpha, etc.
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: 'Tag name for this release'
+        required: true
+        type: string
+
+permissions:
+  contents: write
+
+jobs:
+  create-release:
+    name: Create Release
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Verify tag exists
+        run: |
+          if [ -n "${{ github.event.inputs.tag }}" ]; then
+            echo "Tag: ${{ github.event.inputs.tag }}"
+          else
+            echo "Tag: ${GITHUB_REF#refs/tags/}"
+          fi
+
+      - name: Generate SHA256 checksums
+        run: |
+          echo "## SHA256 Checksums" > checksums.txt
+          echo "" >> checksums.txt
+          echo '```' >> checksums.txt
+          sha256sum install.sh >> checksums.txt
+          sha256sum uninstall.sh >> checksums.txt
+          sha256sum lib/common.sh >> checksums.txt
+          for f in scripts/*.sh; do
+            [ -f "$f" ] && sha256sum "$f" >> checksums.txt
+          done
+          echo '```' >> checksums.txt
+          echo "" >> checksums.txt
+          echo "_Generated: $(date -u '+%Y-%m-%d %H:%M:%S UTC')_" >> checksums.txt
+
+      - name: Create release archive
+        run: |
+          ARCHIVE="v2rayn-russia-setup-${GITHUB_REF_NAME}.tar.gz"
+          tar -czf "$ARCHIVE" \
+            install.sh uninstall.sh \
+            lib/ config/ scripts/ docs/ subscriptions/ spec/ \
+            .github/workflows/ci.yml \
+            --exclude='Аудит' \
+            --exclude='chat-branch*'
+          echo "ARCHIVE=$ARCHIVE" >> $GITHUB_ENV
+
+      - name: Generate archive SHA256
+        run: |
+          sha256sum "${{ env.ARCHIVE }}" > "${{ env.ARCHIVE }}.sha256"
+          echo "Archive: ${{ env.ARCHIVE }}"
+          echo "SHA256: $(cat ${{ env.ARCHIVE }}.sha256)"
+
+      - name: Create GitHub Release
+        uses: softprops/action-gh-release@v2
+        with:
+          name: "v2rayN Russia Setup ${{ github.ref_name }}"
+          body_path: checksums.txt
+          files: |
+            ${{ env.ARCHIVE }}
+            ${{ env.ARCHIVE }}.sha256
+            install.sh
+            uninstall.sh
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

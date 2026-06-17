@@ -2,6 +2,13 @@
   "_warning": "⚠️ Xray-core ОТКЛЮЧАЕТ allowInsecure с 1 августа 2026.",
   "_fix": "В настройках подписки v2rayN: ✏️ → Отпечаток сертификата → Вкл (pinnedPeerCertSha256)",
   "_example_pinned": "'pinnedPeerCertSha256': ['SHA256-отпечаток сертификата вашего сервера'] — получите из v2rayNG/лога подключения",
+  "_policy_comments": {
+    "handshake": "4с — таймаут рукопожатия TLS (баланс скорости и надёжности)",
+    "connIdle": "120с — время простоя до закрытия соединения (экономия памяти)",
+    "uplinkOnly": "1с — задержка закрытия аплинк-канала после ответа сервера",
+    "downlinkOnly": "2с — задержка закрытия даунлинк-канала (для keep-alive)",
+    "bufferSize": "512 — размер буфера на соединение (512+ включает mux.cool)"
+  },
   "policy": {
     "levels": {
       "0": {
@@ -19,6 +26,7 @@
       "statsOutboundDownlink": false
     }
   },
+  "_dns_comments": "DNS-over-HTTPS резолверы с явным маппингом имён → IP. Прямой резолвинг DNS-имён через прокси (dns.google, dns.yandex.net) позволяет обходить блокировки DoH на уровне IP.",
   "dns": {
     "hosts": {
       "dns.google": [
@@ -85,6 +93,7 @@
       "protocol": "freedom",
       "settings": {},
       "tag": "direct",
+      "_stream_comments": "sockopt: tcpFastOpen=true — ускорение TLS (экономит 1 RTT); tcpKeepAliveIdle=45с — интервал keep-alive; tcpKeepAliveInterval=15с — частота проверок; tcpUserTimeout=10000мс — таймаут подтверждения; domainStrategy=UseIP — использовать IP напрямую; tcpcongestion=bbr — алгоритм контроля перегрузки",
       "streamSettings": {
         "sockopt": {
           "tcpFastOpen": true,
@@ -101,6 +110,7 @@
       "tag": "block"
     },
     {
+      "_proxy_comments": "Фрагментация handshake TLS для обхода DPI. packets=tlshello — только начало TLS-сессии; length=100-200 байт — размер фрагмента; interval=10-20мс — пауза между фрагментами (имитация реального TCP-трафика)",
       "protocol": "freedom",
       "settings": {
         "fragment": {

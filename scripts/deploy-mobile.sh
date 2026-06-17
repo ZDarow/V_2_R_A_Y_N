@@ -86,6 +86,15 @@ while [[ $# -gt 0 ]]; do
   shift
 done
 
+# ---- Проверка обязательных команд ----
+if [ "$MODE" = "zip" ] && ! command -v zip &>/dev/null; then
+  warn "zip не установлен. Используйте: sudo apt-get install zip"
+  warn "Буду использовать плоскую копию вместо архива."
+fi
+if [ "$MODE" = "adb" ] && ! command -v adb &>/dev/null; then
+  error "adb не найден. Установите: sudo apt-get install android-tools-adb"
+fi
+
 # ---- 1. Подготовка временной директории ----
 header "Подготовка файлов для Android"
 TMP_DIR=$(mktemp -d)

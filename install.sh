@@ -11,6 +11,13 @@ set -euo pipefail
 REPO_URL="${REPO_URL:-https://github.com/ZDarow/V_2_R_A_Y_N.git}"
 RULES_RELEASE_URL="https://raw.githubusercontent.com/runetfreedom/russia-v2ray-rules-dat/release"
 
+# ---- Валидация REPO_URL ----
+if ! [[ "$REPO_URL" =~ ^https://github\.com/[^/]+/[^/]+(\.git)?$ ]]; then
+  echo "[✗] Недопустимый URL репозитория: $REPO_URL"
+  echo "   Ожидается: https://github.com/username/repo.git"
+  exit 1
+fi
+
 # ---- trap для очистки временных файлов ----
 CLONE_DIR=""
 cleanup() {
@@ -32,12 +39,12 @@ if [ -n "$SCRIPT_DIR_INSTALLER" ] && [ -f "$SCRIPT_DIR_INSTALLER/lib/common.sh" 
   LIB_SHARED="$SCRIPT_DIR_INSTALLER/lib/common.sh"
   # shellcheck disable=SC1090
   source "$LIB_SHARED"
-  log_init  # инициализация лог-файла и fd 3
+  declare -f log_init &>/dev/null && log_init  # инициализация лог-файла и fd 3
 elif [ -f "./lib/common.sh" ]; then
   LIB_SHARED="./lib/common.sh"
   # shellcheck disable=SC1090
   source "$LIB_SHARED"
-  log_init
+  declare -f log_init &>/dev/null && log_init
 fi
 
 # Если библиотека не загружена — минимальные fallback функции
@@ -127,8 +134,7 @@ fi
 
 # ---- Режимы работы ----
 # Определяем, откуда запущен скрипт: из локального репозитория или из pipe
-# Используем ${BASH_SOURCE[0]:-$0} для защиты от pipe и set -u
-SCRIPT_PATH="$(realpath "${BASH_SOURCE[0]:-$0}" 2>/dev/null || readlink -f "${BASH_SOURCE[0]:-$0}" 2>/dev/null || echo "${BASH_SOURCE[0]:-$0}")"
+# SCRIPT_PATH уже вычислен выше (строки 24-28)
 if [ -n "$SCRIPT_PATH" ] && [ -f "$(dirname "$SCRIPT_PATH")/config/routing-russia.json" ] 2>/dev/null; then
   SCRIPT_DIR="$(cd "$(dirname "$SCRIPT_PATH")" && pwd)"
   # shellcheck disable=SC2034
@@ -262,6 +268,11 @@ if [ "$SKIP_V2RAYN" = false ]; then
       fi
     fi
   fi
+fi
+
+# ---- Проверка $HOME ----
+if [ -z "${HOME:-}" ] || [ "$HOME" = "/" ]; then
+  error "HOME не установлен или равен корню системы. Установите HOME в директорию пользователя."
 fi
 
 # ---- 4. Директории ----
@@ -501,7 +512,7 @@ if command -v systemctl &>/dev/null; then
     if [ "$DRY_RUN" = true ]; then
       echo "  [DRY-RUN] Установка systemd сервиса v2rayn.service"
     else
-      HOME_ESC=$(printf '%s\n' "$HOME" | sed 's/[&|/]/\\&/g')
+      HOME_ESC=$(printf '%s\n' "$HOME" | sed 's/[&|/\]/\\&/g')
       sed "s|ExecStart=.*|ExecStart=${HOME_ESC}/.local/bin/v2rayn|" \
         "$SCRIPT_DIR/lib/systemd/v2rayn.service" > "$SYSTEMD_USER_DIR/v2rayn.service"
       sed -i "s|%h|$HOME|g; s|%t|${XDG_RUNTIME_DIR:-/run/user/$(id -u)}|g" "$SYSTEMD_USER_DIR/v2rayn.service"

@@ -39,14 +39,18 @@ case "${1:-status}" in
         gsettings set org.gnome.system.proxy.socks host '127.0.0.1' 2>/dev/null || true
         gsettings set org.gnome.system.proxy.socks port 10808 2>/dev/null || true
         # Convert comma-separated to gsettings array of strings
-        IFS=',' read -ra HOSTS_ARR <<< "$IGNORE_HOSTS"
+        # IFS pollution guard: subshell не затрагивает глобальный IFS
         GSETTINGS_IGNORE="["
         FIRST=true
-        for H in "${HOSTS_ARR[@]}"; do
-          $FIRST || GSETTINGS_IGNORE+=", "
-          GSETTINGS_IGNORE+="'${H}'"
-          FIRST=false
-        done
+        while IFS=',' read -ra HOSTS_ARR || [ "${#HOSTS_ARR[@]}" -gt 0 ]; do
+          for H in "${HOSTS_ARR[@]}"; do
+            $FIRST || GSETTINGS_IGNORE+=", "
+            # Экранирование одинарных кавычек внутри hostname
+            H_SAFE="${H//\'/\\\'}"
+            GSETTINGS_IGNORE+="'${H_SAFE}'"
+            FIRST=false
+          done
+        done <<< "$IGNORE_HOSTS"
         GSETTINGS_IGNORE+="]"
         gsettings set org.gnome.system.proxy ignore-hosts "$GSETTINGS_IGNORE" 2>/dev/null || true
         echo "Прокси включён (GNOME)"

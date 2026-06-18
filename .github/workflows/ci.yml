@@ -42,10 +42,10 @@ jobs:
       - name: Run ShellCheck
         run: |
           errors=0
-          files="install.sh uninstall.sh lib/common.sh scripts/update-rules.sh \
+          files="install.sh uninstall.sh apply-configs.sh lib/common.sh scripts/update-rules.sh \
             scripts/proxy-toggle.sh scripts/proxy_set_linux_sh.sh \
             scripts/status.sh scripts/diagnose.sh scripts/kill-switch.sh \
-            scripts/migrate-allowinsecure.sh"
+            scripts/migrate-allowinsecure.sh scripts/diagnose-network.sh"
           for f in $files; do
             if [ -f "$f" ]; then
               echo "Checking $f..."
@@ -63,12 +63,12 @@ jobs:
         run: |
           errors=0
           for f in \
-            install.sh uninstall.sh \
+            install.sh uninstall.sh apply-configs.sh \
             lib/common.sh \
             scripts/update-rules.sh scripts/proxy-toggle.sh \
             scripts/proxy_set_linux_sh.sh \
             scripts/status.sh scripts/diagnose.sh scripts/kill-switch.sh \
-            scripts/migrate-allowinsecure.sh
+            scripts/migrate-allowinsecure.sh scripts/diagnose-network.sh
           do
             if [ -f "$f" ]; then
               echo "Checking $f..."
@@ -134,9 +134,10 @@ jobs:
           errors=0
           for f in \
             README.md CHANGELOG.md \
-            docs/README.md docs/install.md \
-            docs/routing.md docs/scripts.md docs/ci.md docs/faq.md \
-            subscriptions/README.md
+            docs/INDEX.md docs/INSTALL.md docs/USAGE.md docs/ARCHITECTURE.md \
+            docs/CONFIGURATION.md docs/SCRIPTS.md docs/TROUBLESHOOTING.md \
+            docs/ci.md docs/faq.md \
+            subscriptions/README.md mobile/docs/mobile.md
           do
             if [ ! -f "$f" ]; then
               echo "  $f: MISSING"

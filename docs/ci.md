@@ -47,7 +47,7 @@ for f in \
   scripts/update-rules.sh scripts/proxy-toggle.sh \
   scripts/proxy_set_linux_sh.sh scripts/status.sh \
   scripts/diagnose.sh scripts/kill-switch.sh \
-  scripts/migrate-allowinsecure.sh
+  scripts/migrate-allowinsecure.sh scripts/diagnose-network.sh
 do
   bash -n "$f" || errors=$((errors+1))
 done
@@ -80,9 +80,10 @@ done
 ```bash
 for f in \
   README.md CHANGELOG.md \
-  docs/README.md docs/install.md \
-  docs/routing.md docs/scripts.md docs/ci.md docs/faq.md \
-  subscriptions/README.md
+  docs/INDEX.md docs/INSTALL.md docs/USAGE.md docs/ARCHITECTURE.md \
+  docs/CONFIGURATION.md docs/SCRIPTS.md docs/TROUBLESHOOTING.md \
+  docs/ci.md docs/faq.md \
+  subscriptions/README.md mobile/docs/mobile.md
 do
   # проверка существования
   # markdownlint (если установлен)

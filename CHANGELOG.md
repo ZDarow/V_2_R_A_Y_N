@@ -5,20 +5,32 @@
 ## [Unreleased]
 
 ### Added
+- `docs/ARCHITECTURE.md` — архитектура проекта: компоненты, потоки данных, схемы
+- `docs/USAGE.md` — инструкция по ежедневному использованию
+- `docs/TROUBLESHOOTING.md` — устранение неполадок (8 категорий проблем)
+- `docs/CONFIGURATION.md` — детальное описание всех конфигурационных файлов
+- `docs/INDEX.md` — карта документации с навигацией
+- `scripts/diagnose-network.sh` — полная сетевая диагностика v2.0.0 (14 секций, 2021 строка)
 - `scripts/deploy-mobile.sh` — деплой конфигов на Android (ZIP/ADB/HTTP)
-- `docs/` — полная техническая документация (7 файлов, 954 строки)
 - `.editorconfig` — единый стиль кода
 - `.gitattributes` — нормализация строк, diff-настройки
-- `config/v2rayng-routing-russia.json` — формат JSON array для v2rayNG (Discussion #4761)
+- `config/v2rayng-routing-russia.json` — формат JSON array для v2rayNG
 - `config/v2rayng-only-blocked.json` — формат JSON array (только заблокированное)
 - `scripts/generate-mobile-url.sh` — генерация VLESS URL из JSON-конфига
 - `scripts/mobile-setup-termux.sh` — автонастройка v2rayNG через Termux (v1.1.0)
 - `lib/common.sh` — общая библиотека: retry-download, SHA256, блокировки, логирование
 - `lib/systemd/v2rayn-rules-update.service` — systemd oneshot для авто-обновления
 - `lib/systemd/v2rayn-rules-update.timer` — еженедельный таймер для geoip/geosite (6ч задержка)
-- `scripts/mobile-apply-routing.sh` — применение правил роутинга в 2 тапа (clipboard + am start)
+- `scripts/mobile-apply-routing.sh` — применение правил роутинга в 2 тапа
+- `.github/workflows/ci.yml`: jobs actionlint, yamllint, docs в markdown-check
+- `.yamllint.yml` — конфигурация yamllint для CI
 
 ### Changed
+- `docs/` — полная переработка документации: 8 файлов вместо 5, +300% объёма
+- `docs/install.md` — расширена: Fedora/Arch, WSL2, специфичные системы
+- `docs/scripts.md` — расширена: добавлены status.sh, diagnose.sh, diagnose-network.sh, kill-switch.sh, migrate-allowinsecure.sh, apply-configs.sh
+- `docs/faq.md` — дополнена: fingerprint, allowInsecure, Let's Encrypt
+- `README.md` — полностью переработан: карта документации, быстрый старт, ссылки
 - `install.sh`: замена `download_file()` на `download_with_retry()` (3 попытки)
 - `install.sh`: SHA256 верификация geoip/geosite при загрузке
 - `install.sh`: кэш `~/.cache/v2rayN/rules/` для offline fallback
@@ -32,18 +44,10 @@
 - `scripts/update-rules.sh`: логирование в `~/.local/share/v2rayN/logs/`
 - `scripts/deploy-mobile.sh`: флаг `--apply` для авто-открытия v2rayNG после ADB push
 - `scripts/deploy-mobile.sh`: копирование `v2rayng-routing-russia.json`, `v2rayng-only-blocked.json`
-- `scripts/deploy-mobile.sh`: README-Android.txt с методами A/B и IPOnDemand
-- `scripts/mobile-setup-termux.sh` v1.2.0: retry 3x с экспоненциальной задержкой
-- `scripts/mobile-setup-termux.sh` v1.2.0: offline fallback из assets/
-- `scripts/mobile-setup-termux.sh` v1.2.0: авто-открытие v2rayNG через `am start`
-- `scripts/mobile-setup-termux.sh` v1.2.0: deep link для подписки
-- `deploy/index.html`: кнопки Copy JSON (fetch + clipboard API) для v2rayng-*.json
-- `deploy/index.html`: deep link `v2rayng://install-sub/URL` для однокликового импорта
-- `deploy/index.html`: CDN зеркало (jsDelivr)
-- `uninstall.sh`: удаление systemd timer v2rayn-rules-update
-- `uninstall.sh`: удаление кэша `~/.cache/v2rayN/`
-- `uninstall.sh`: удаление symlink `v2rayn-update-rules`
-- `uninstall.sh`: удаление shared библиотек
+- `scripts/mobile-setup-termux.sh` v1.2.0: retry 3x, offline fallback, auto-open, deep link
+- `deploy/index.html`: Copy JSON + clipboard API, deep link, CDN jsDelivr
+- `uninstall.sh`: удаление systemd timer, кэша, symlink, shared библиотек
+- `apply-configs.sh`: исправлены 3 предупреждения SC2155 (shellcheck clean)
 
 ### Fixed
 - `install.sh`: удалён fallback на .NET 8.0 (v2rayN 7.22+ требует только 10.0)
@@ -62,8 +66,12 @@
 - `update-rules.sh`: `CLEANUP_TMP` → `trap EXIT`, SHA256, retry
 - `update-rules.sh`: lock-файл для предотвращения конкурентного запуска
 - `config/routing-russia.json`: ads-блокировка выше ru-blocked
-- `config/v2rayng-*.json`: добавлено поле `looked: false` (Discussion #4761)
+- `config/v2rayng-*.json`: добавлено поле `looked: false`
 - `config/config-template-xray.json`: убран хардкод «осталось 45 дней»
+- `scripts/diagnose-network.sh`: grep -c + || echo 0 → дублирование вывода
+- `scripts/diagnose-network.sh`: systemd-detect-virt дублирование "none"
+- `scripts/diagnose-network.sh`: ss -tan grep 'tcp' → wc -l (нет 'tcp' в выводе)
+- `apply-configs.sh`: 3 предупреждения SC2155 (declare and assign separately)
 - `.github/workflows/ci.yml`: `ludeeus/action-shellcheck@master` → `@2.0.0`
 - `.github/workflows/ci.yml`: добавлен bash-syntax job
 - `.github/workflows/ci.yml`: uninstall.sh в shellcheck

@@ -1,6 +1,6 @@
-# v2rayN Russia Setup — оптимизированная настройка v2rayN/v2rayNG для РФ
+# v2rayN Russia Setup — оптимизированная настройка v2rayN для РФ
 
-Автоматизированная настройка **v2rayN** (Linux/Windows) и **v2rayNG** (Android) для работы в условиях блокировок на территории Российской Федерации. Включает оптимизированные правила роутинга, конфигурацию Xray-core, скрипты управления системным прокси и импорт актуальных подписок.
+Автоматизированная настройка **v2rayN** (Linux/Windows) для работы в условиях блокировок на территории Российской Федерации. Включает оптимизированные правила роутинга, конфигурацию Xray-core, скрипты управления системным прокси и импорт актуальных подписок.
 
 ## Назначение
 
@@ -16,25 +16,21 @@
 ```
 v2rayN-russia-setup/
 ├── config/
-│   ├── routing-russia.json          # Правила роутинга «Всё через прокси» (v2rayN + v2rayNG)
-│   ├── only_blocked.json            # Правила «Только заблокированное» (v2rayN + v2rayNG)
-│   └── config-template-xray.json    # Шаблон Xray-core (v2rayN + v2rayNG)
+│   ├── routing-russia.json          # Правила роутинга «Всё через прокси»
+│   ├── only_blocked.json            # Правила «Только заблокированное»
+│   └── config-template-xray.json    # Шаблон Xray-core
 ├── scripts/
-│   ├── deploy-mobile.sh              # Деплой конфигов на Android (ZIP/ADB/HTTP)
-│   ├── update-rules.sh               # Обновление geoip/geosite (ветка release)
-│   ├── proxy-toggle.sh               # Вкл/выкл системного прокси (GNOME+KDE)
-│   └── proxy_set_linux_sh.sh         # Установка прокси (GNOME/KDE)
+│   ├── update-rules.sh              # Обновление geoip/geosite (ветка release)
+│   ├── proxy-toggle.sh              # Вкл/выкл системного прокси (GNOME+KDE)
+│   └── proxy_set_linux_sh.sh        # Установка прокси (GNOME/KDE)
 ├── subscriptions/
 │   └── README.md                    # Список подписок
-├── deploy/
-│   └── index.html                    # Мобильный портал (скачать конфиги с телефона)
 ├── install.sh                       # Автоматический установщик v2rayN (Linux)
 ├── uninstall.sh                     # Деинсталлятор v2rayN
 ├── LICENSE                          # MIT License
 ├── README.md                        # Этот файл
 └── docs/                            # Подробная документация
     ├── install.md                   # Установка и флаги
-    ├── mobile.md                    # Мобильный деплой (Android)
     ├── routing.md                   # Правила роутинга
     ├── scripts.md                   # Скрипты управления
     ├── ci.md                        # CI/CD пайплайн
@@ -80,10 +76,10 @@ cd V_2_R_A_Y_N
 2. Устанавливает зависимости (git, wget, curl, sqlite3, .NET Runtime 10.0+)
 3. Скачивает последнюю версию v2rayN с GitHub и устанавливает
 4. Загружает правила geoip/geosite из **ветки release** `runetfreedom/russia-v2ray-rules-dat` (retry 3x + SHA256 + кэш)
-5. Устанавливает конфигурации роутинга: 5 JSON-файлов (v2rayN + v2rayNG форматы)
+5. Устанавливает конфигурации роутинга: 3 JSON-файла
 6. Устанавливает шаблон Xray-core с оптимизациями (outbound `proxy` с фрагментацией, DNS через прокси, Discord VoIP)
 7. Устанавливает скрипты управления + **systemd timer** для еженедельного авто-обновления geoip/geosite
-8. Импортирует подписки в базу v2rayN (SQLite), включая whitelist CIDR/IP от hxehex
+8. Импортирует подписки в базу v2rayN (SQLite)
 9. Настраивает системный прокси (GNOME/KDE)
 10. Выводит предупреждение об отключении allowInsecure с 1 августа 2026
 
@@ -106,187 +102,7 @@ journalctl --user -u v2rayn-rules-update.service
 Все загрузки имеют retry 3 попытки с экспоненциальной задержкой,
 SHA256 верификацию и защиту от конкурентного запуска (lock-файл).
 
-## v2rayNG — Android-клиент
 
-**v2rayNG** (58k ★) — официальный Android-клиент от 2dust, основанный на том же Xray-core, что и v2rayN.
-Все конфигурационные файлы из этого репозитория (`routing-russia.json`, `only_blocked.json`, `config-template-xray.json`, подписки) **полностью совместимы** с v2rayNG.
-
-### Установка v2rayNG
-
-| Источник | Ссылка | Примечание |
-|----------|--------|------------|
-| **GitHub Releases** | [2dust/v2rayNG/releases](https://github.com/2dust/v2rayNG/releases) | APK файлы: `v2rayNG_<version>.apk`, `v2rayNG_<version>-arm64-v8a.apk` |
-| **F-Droid** | [F-Droid](https://f-droid.org/packages/com.v2ray.ang/) | Подписанная сборка (рекомендуется) |
-| **Google Play** | [Play Market](https://play.google.com/store/apps/details?id=com.v2ray.ang) | Требуется Google-сервисы |
-
-**Текущая версия:** `2.2.3` (2 июня 2026), Xray-core v26.6.1, target SDK 37 (Android 17+)
-
-### 📱 Мобильный портал (без терминала)
-
-Откройте на телефоне **одну страницу** и скачайте все файлы нажатиями:
-
-> **👉 [ZDarow.github.io/V_2_R_A_Y_N/deploy/](https://ZDarow.github.io/V_2_R_A_Y_N/deploy/)**
->
-> Зеркало (CDN): [cdn.jsdelivr.net/gh/ZDarow/V_2_R_A_Y_N@main/deploy/index.html](https://cdn.jsdelivr.net/gh/ZDarow/V_2_R_A_Y_N@main/deploy/index.html)
-
-**Что на странице:** скачивание JSON + geoip/geosite одной кнопкой, копирование подписок в буфер, пошаговая инструкция — всё с телефона, без терминала.
-
-### Настройка для РФ на Android
-
-1. **Установите v2rayNG** любым из способов выше
-2. **Импортируйте подписки** через меню + → «Импорт из буфера обмена» или по URL
-3. **Настройте правила роутинга:**
-   - Скопируйте `routing-russia.json` или `only_blocked.json` в `Android/data/com.v2ray.ang/files/assets/`
-   - В приложении: Настройки → Настройки маршрутизации → «Пользовательский файл роутинга» → выберите файл
-4. **Обновите geoip/geosite** (по умолчанию v2rayNG использует Loyalsoldier, замените на runetfreedom):
-   - Поместите `geoip.dat` и `geosite.dat` из [runetfreedom release](https://github.com/runetfreedom/russia-v2ray-rules-dat) в папку `Android/data/com.v2ray.ang/files/assets/`
-   - **Важно:** скачивание правил внутри v2rayNG требует работающего прокси (курица-яйцо). Скачайте вручную на компьютере и перенесите на телефон
-5. **⚡ Проблема «курицы и яйца»:** для первой загрузки geoip/geosite понадобится либо:
-   - Временно использовать публичный VPN для скачивания правил
-   - Перенести файлы через USB/ADB с компьютера, где уже настроен v2rayN
-   - Использовать скрипт `deploy-mobile.sh` (см. ниже)
-   - Использовать встроенные правила Loyalsoldier (они уже есть в APK)
-
-### 🚀 Автоматизированный деплой (deploy-mobile.sh)
-
-Скрипт `scripts/deploy-mobile.sh` решает проблему «курицы и яйца» — загружает свежие geoip/geosite, пакует конфиги и переносит на телефон в один шаг.
-
-```bash
-# Из корня репозитория:
-./scripts/deploy-mobile.sh --help
-
-# Создать ZIP-архив для ручного переноса:
-./scripts/deploy-mobile.sh --zip
-
-# Push напрямую на телефон через USB (требуется adb + отладка):
-./scripts/deploy-mobile.sh --adb
-
-# Запустить HTTP-сервер — скачайте ZIP с телефона через браузер:
-./scripts/deploy-mobile.sh --server
-
-# Только geoip/geosite, без конфигов:
-./scripts/deploy-mobile.sh --adb --rules-only
-```
-
-**Что делает скрипт:**
-1. Скачивает `geoip.dat` и `geosite.dat` из runetfreedom (ветка release)
-2. Копирует `routing-russia.json`, `only_blocked.json`, `config-template-xray.json`
-3. Создаёт `README-Android.txt` с инструкцией
-4. Доставляет на телефон выбранным способом: ZIP / ADB / HTTP
-
-**Требования:**
-- Для `--zip`: утилита `zip` (apt install zip)
-- Для `--adb`: `adb` из android-tools-adb, USB-отладка на телефоне
-- Для `--server`: python3 (есть в любой системе)
-
-### ⚠️ allowInsecure на Android
-
-**v2rayNG 2.2.3 полностью удалил настройку allowInsecure.** Вместо неё используется **только pinnedPeerCertSha256** (привязка к отпечатку SHA256 сертификата).
-
-- Убедитесь, что в настройках вашей подписки включён «Отпечаток сертификата» (certificate fingerprint)
-- [Инструкция по allowInsecure → pinnedPeerCertSha256](https://github.com/2dust/v2rayN/discussions/9460)
-
-### Отличия v2rayNG от v2rayN
-
-| Возможность | v2rayN (Linux) | v2rayNG (Android) |
-|-------------|----------------|-------------------|
-| Интерфейс | Avalonia (десктоп) | Material Design (мобильный) |
-| TUN-режим | Через Xray-core TUN | Стандартный Android VPN |
-| Системный прокси | GNOME/KDE Settings | Android VPN API (встроен) |
-| Fragment | ✓ (конфиг Xray) | ✓ (через Xray-core) |
-| XHTTP | ✓ (через подписки) | ✓ (через подписки) |
-| Подписки | URL-импорт в SQLite | URL-импорт напрямую |
-| geoip/geosite | automatic (update-rules.sh) | ручная замена файлов |
-| allowInsecure | удалён в 7.22.6+ | удалён в 2.2.3 |
-
-### 📱 Мобильная настройка без ПК
-
-Полная настройка v2rayNG прямо на телефоне — без компьютера, ADB и терминала.
-Все файлы забираются напрямую из репозитория через браузер или Termux.
-
-#### Способ 1: Termux (полная автоматизация, рекомендуется)
-
-Автоматический скрипт устанавливает geoip/geosite и правила роутинга в один шаг:
-
-```bash
-# Установите Termux из F-Droid: https://f-droid.org/packages/com.termux/
-pkg install curl
-curl -sSL https://raw.githubusercontent.com/ZDarow/V_2_R_A_Y_N/main/scripts/mobile-setup-termux.sh | bash
-```
-
-**Что делает скрипт:**
-1. Скачивает `geoip.dat` / `geosite.dat` из runetfreedom (ветка release)
-2. Скачивает правила роутинга для v2rayNG (`v2rayng-routing-russia.json`, `v2rayng-only-blocked.json`)
-3. Копирует все файлы в `Android/data/com.v2ray.ang/files/assets/`
-4. Копирует выбранный пресет правил в буфер обмена (через `termux-clipboard-set`)
-5. Выводит пошаговую инструкцию с импортом из буфера и настройкой доменной стратегии
-
-**Решает проблему «курицы и яйца»:** работает до первого запуска прокси.
-
-#### Способ 2: Браузер + файловый менеджер (без Termux)
-
-Без установки дополнительных приложений — только штатный браузер и файловый менеджер:
-
-1. **Откройте JSON файл в браузере** — нажмите на ссылку, откроется содержимое:
-   - [Правила «Всё через прокси»](config/v2rayng-routing-russia.json)
-   - [Правила «Только заблокированное»](config/v2rayng-only-blocked.json)
-
-2. **Импорт через буфер обмена (рекомендуется):**
-   - Выделите весь текст JSON (Ctrl+A / длинное нажатие → «Выбрать всё»)
-   - Скопируйте (Ctrl+C / «Копировать»)
-   - **v2rayNG** → ⋮ (меню слева) → Маршрутизация → ⋮ (три точки сверху)
-     → **Импорт правил из буфера обмена** → OK
-
-   **Или через файл (альтернатива):**
-   - Скачайте JSON как файл
-   - Переместите в `Android/data/com.v2ray.ang/files/assets/`
-   - **v2rayNG** → Маршрутизация → ⋮ → Импорт правил из файла
-
-3. **Смените доменную стратегию:**
-   Маршрутизация → поле «Доменная стратегия» → **IPOnDemand**
-   (рекомендуется, иначе geoip:ru может не работать)
-
-4. **Добавьте подписку**: ➕ → Импорт по URL → вставьте ссылку из списка подписок
-
-#### Способ 3: Мобильный портал
-
-Откройте в браузере телефона страницу мобильного портала и скачайте всё нажатиями:
-
-> **👉 [Мобильный портал](https://ZDarow.github.io/V_2_R_A_Y_N/deploy/)**
-
-**Что на странице:** кнопки скачивания JSON-конфигов, geoip/geosite, копирование подписок в буфер, пошаговая инструкция.
-
-#### Файлы роутинга
-
-Проект предоставляет правила роутинга в **двух форматах**, каждый для своего способа импорта:
-
-| Формат | Файл | Куда импортировать |
-|--------|------|-------------------|
-| **JSON object** (десктоп) | `config/routing-russia.json` `config/only_blocked.json` | v2rayN → Настройки → Настройки маршрутизации → Пользовательский файл роутинга |
-| **JSON array** (универсальный) | `config/v2rayng-routing-russia.json` `config/v2rayng-only-blocked.json` | v2rayNG → Маршрутизация → ⋮ → Импорт правил из файла |
-
-**Формат JSON array** (с полями `domain`, `ip`, `protocol`, `network`, `port`,
-`outboundTag`, `enabled`, `looked`, `remarks`) соответствует обсуждению
-[v2rayNG Discussion #4761](https://github.com/2dust/v2rayNG/discussions/4761)
-и совместим с:
-- **v2rayNG** — импорт правил роутинга (Маршрутизация → ⋮ → Импорт из буфера обмена или из файла)
-- **v2rayN** — импорт во встроенный редактор правил (Маршрутизация → Правила → ⋮ → Импорт из файла)
-
-**Формат JSON object** (с полями `domainStrategy`, `domainMatcher`, `rules`) — только для v2rayN как пользовательский файл роутинга.
-
-В режиме работы файлы:
-
-| Файл | Режим | Когда использовать |
-|------|-------|-------------------|
-| `v2rayng-routing-russia.json` | Всё через прокси | Домашний WiFi, безлимитный трафик |
-| `v2rayng-only-blocked.json` | Только заблокированное | Мобильный интернет, лимитный трафик |
-
-#### 🔧 Дополнительные скрипты
-
-| Скрипт | Назначение |
-|--------|-----------|
-| `scripts/mobile-setup-termux.sh` | Полная автоматизация настройки v2rayNG через Termux (без ПК) |
-| `scripts/generate-mobile-url.sh` | Генерация VLESS URL из JSON-конфига для импорта в v2rayNG |
 
 ## Деинсталляция
 
@@ -310,7 +126,6 @@ bash <(curl -sSL https://raw.githubusercontent.com/ZDarow/V_2_R_A_Y_N/main/scrip
 
 | Подписка | URL |
 |----------|-----|
-| BLACK VLESS RUS Mobile | https://raw.githubusercontent.com/igareck/vpn-configs-for-russia/refs/heads/main/BLACK_VLESS_RUS_mobile.txt |
 | BLACK VLESS RUS | https://raw.githubusercontent.com/igareck/vpn-configs-for-russia/refs/heads/main/BLACK_VLESS_RUS.txt |
 | BLACK SS+All RUS | https://raw.githubusercontent.com/igareck/vpn-configs-for-russia/refs/heads/main/BLACK_SS+All_RUS.txt |
 
@@ -318,7 +133,6 @@ bash <(curl -sSL https://raw.githubusercontent.com/ZDarow/V_2_R_A_Y_N/main/scrip
 
 | Подписка | URL |
 |----------|-----|
-| Vless-Reality White Lists Rus Mobile | https://raw.githubusercontent.com/igareck/vpn-configs-for-russia/refs/heads/main/Vless-Reality-White-Lists-Rus-Mobile.txt |
 | WHITE CIDR RU all | https://raw.githubusercontent.com/igareck/vpn-configs-for-russia/refs/heads/main/WHITE-CIDR-RU-all.txt |
 | WHITE SNI RU all | https://raw.githubusercontent.com/igareck/vpn-configs-for-russia/refs/heads/main/WHITE-SNI-RU-all.txt |
 
@@ -328,18 +142,8 @@ bash <(curl -sSL https://raw.githubusercontent.com/ZDarow/V_2_R_A_Y_N/main/scrip
 |----------|-----|
 | vless_universal | https://raw.githubusercontent.com/zieng2/wl/main/vless_universal.txt |
 
-### Whitelist CIDR/IP для мобильного интернета (hxehex)
-
-| Подписка | URL | Назначение |
-|----------|-----|------------|
-| CIDR Whitelist | https://raw.githubusercontent.com/hxehex/russia-mobile-internet-whitelist/main/cidrwhitelist.txt | CIDR-сети, не заблокированные на мобильных операторах |
-| IP Whitelist | https://raw.githubusercontent.com/hxehex/russia-mobile-internet-whitelist/main/ipwhitelist.txt | Отдельные IP-адреса из белого списка |
-| SNI Whitelist | https://raw.githubusercontent.com/hxehex/russia-mobile-internet-whitelist/main/whitelist.txt | Домены (SNI), доступные при вайтлисте |
-
 > **Примечание:** При блокировке GitHub используйте зеркала: GitLab, Codeberg, Gitea, GitHack.
 > Полный список зеркал: https://github.com/igareck/vpn-configs-for-russia#readme
->
-> **Дискорд-сообщество по мобильным блокировкам:** https://discord.gg/QPBdMf8dxG
 
 ## Режимы маршрутизации
 
@@ -351,8 +155,8 @@ bash <(curl -sSL https://raw.githubusercontent.com/ZDarow/V_2_R_A_Y_N/main/scrip
 - Приватных сетей (`geoip:private`)
 - Блокировки рекламы (`geosite:category-ads-all`)
 
-### `only_blocked.json` — Только заблокированное (режим «Белый список», для мобильного интернета)
-Рекомендуется для **мобильных операторов** (МТС, Билайн, МегаФон, Tele2, Yota) при вайтлисте:
+### `only_blocked.json` — Только заблокированное (режим «Белый список»)
+Рекомендуется при whitelist-блокировках (IP-вайтлист), когда прокси нужен только для заблокированных ресурсов:
 - `geoip:ru-blocked` + `geosite:ru-blocked` → proxy
 - **DNS-серверы (1.1.1.1, 8.8.8.8) через прокси** — критично при белых списках
 - **Discord VoIP (UDP 50000-65535) через прокси**
@@ -391,25 +195,23 @@ REALITY **полностью устраняет TLS fingerprint сервера**
 - `length: 100-200` — размер фрагментов
 - `interval: 10-20` — интервал между фрагментами (ms)
 
-## ⚠️ allowInsecurity будет отключён с 1 августа 2026
+## ⚠️ allowInsecure удалён в Xray v26.2.6+
 
-**Xray-core отключает параметр `allowInsecure`** с 1 августа 2026.
-Вместо него используйте:
-- **`verifyPeerCertByName`** — проверка сертификата по имени (рекомендуется)
-- **FP (fingerprint) pinning** — привязка к отпечатку сертификата
+**Xray-core v26.2.6+ (февраль 2026) полностью удалил `allowInsecure`.**
+Вместо него используйте **`pinnedPeerCertSha256`** — привязку к SHA256 отпечатку сертификата.
 
-**v2rayN 7.22.7+** и **v2rayNG 2.2.3+** уже заменили allowInsecure на `verifyPeerCertByName` / `pinnedPeerCertSha256`.
-Убедитесь, что в настройках подписки включена эта опция, а не allowInsecure.
+**v2rayN 7.22.7+** уже заменил allowInsecure на `pinnedPeerCertSha256`.
+Убедитесь, что в настройках подписки включён «Отпечаток сертификата», а не allowInsecure.
 
 ## Two-server схема (для обхода IP-whitelist)
 
-Самый надёжный способ обхода мобильных блокировок (IP + SNI whitelist):
+Обход блокировок на уровне IP (IP-whitelist):
 
 ```
-Клиент (РФ, мобильный) → РФ-сервер (белый IP) → Иностранный сервер → Интернет
+Клиент (РФ) → РФ-сервер (белый IP) → Иностранный сервер → Интернет
 ```
 
-1. Купите VPS в РФ с IP из `cidrwhitelist.txt` (hxehex)
+1. Купите VPS в РФ с IP, не находящимся под whitelist-блокировкой
 2. Настройте на нём Xray как прокси-переходник
 3. Весь трафик идёт через РФ-сервер с «белым» IP → иностранный сервер → цель
 
@@ -441,9 +243,7 @@ REALITY **полностью устраняет TLS fingerprint сервера**
 - [runetfreedom/russia-v2ray-custom-routing-list](https://github.com/runetfreedom/russia-v2ray-custom-routing-list) — шаблоны маршрутизации v2rayN
 - [igareck/vpn-configs-for-russia](https://github.com/igareck/vpn-configs-for-russia) — конфиги и списки
 - [zieng2/wl](https://github.com/zieng2/wl) — белые списки
-- [hxehex/russia-mobile-internet-whitelist](https://github.com/hxehex/russia-mobile-internet-whitelist) — whitelist CIDR/IP/SNI для мобильных операторов РФ
 - [XTLS/Xray-core](https://github.com/XTLS/Xray-core) — Xray-core (v26.3.27+)
 - [XTLS/REALITY](https://github.com/XTLS/REALITY) — протокол REALITY (THE NEXT FUTURE)
 - [2dust/v2rayN](https://github.com/2dust/v2rayN) — v2rayN GUI (Linux/Windows)
-- [2dust/v2rayNG](https://github.com/2dust/v2rayNG) — v2rayNG for Android (58k ★, v2.2.3)
 - [Xray-core Documentation](https://xtls.github.io/) — документация Xray

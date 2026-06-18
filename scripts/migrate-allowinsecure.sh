@@ -261,16 +261,4 @@ cat << 'MIGRATION_GUIDE'
   • Let's Encrypt CA: https://letsencrypt.org/certificates/
 MIGRATION_GUIDE
 
-header "Дополнительно: v2rayNG 2.2.x"
 
-cat << 'V2RAYNG_22X'
-
-v2rayNG 2.2.x — ключевые изменения:
-
-  • Удалён UI allowInsecure (настройки подписки) — Замена на certificate pinning
-  • Рефакторинг логики подписок (подписки импортируются в guiConfigs/)
-  • Добавлена поддержка политик (policy groups) в роутинге
-    ─ новый формат: "outboundTags": ["proxy1", "proxy2"] (балансировка)
-
-  Подробнее: https://github.com/2dust/v2rayNG/releases
-V2RAYNG_22X

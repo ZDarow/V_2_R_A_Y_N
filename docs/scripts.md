@@ -1,6 +1,6 @@
 # Скрипты управления
 
-Проект включает 9 shell-скриптов и общую библиотеку.
+Проект включает shell-скрипты и общую библиотеку.
 
 ## lib/common.sh — общая библиотека (source)
 
@@ -157,88 +157,6 @@ source scripts/proxy_set_linux_sh.sh
 set_gnome_proxy "manual" "127.0.0.1" "10809" "localhost,127.0.0.0/8,::1,.ru,.su,.xn--p1ai"
 ```
 
-## deploy-mobile.sh — деплой на Android
-
-См. [mobile.md](mobile.md) — полная документация мобильного деплоя.
-
-**Флаги:**
-| Флаг | Описание |
-|------|----------|
-| `--zip` | Создать ZIP-архив |
-| `--adb` | Push на телефон через USB |
-| `--adb --apply` | Push + авто-открытие v2rayNG на телефоне |
-| `--server` | HTTP-сервер для WiFi-передачи |
-| `--rules-only` | Только geoip/geosite (без config) |
-
-## mobile-apply-routing.sh — применение правил в v2rayNG (Android/Termux)
-
-Автоматизирует импорт правил роутинга в v2rayNG через буфер обмена + `am start`.
-
-### Использование
-
-```bash
-# Спросит какой пресет:
-bash scripts/mobile-apply-routing.sh
-
-# Прямое указание:
-bash scripts/mobile-apply-routing.sh russia    # «Всё через прокси»
-bash scripts/mobile-apply-routing.sh blocked   # «Только заблокированное»
-```
-
-### Что делает
-
-```
- 1. Загружает JSON правил из репозитория
- 2. Валидирует JSON (python3 -m json.tool)
- 3. Копирует содержимое в буфер обмена (termux-clipboard-set)
- 4. Открывает v2rayNG (am start)
- 5. Показывает deep link для подписки (v2rayng://install-sub/)
- 6. Инструкция: 2 тапа до готовности
-```
-
-### Зависимости
-
-- Termux, `curl`, `termux-api` (termux-clipboard-set)
-
-## mobile-setup-termux.sh — полная настройка v2rayNG (Android/Termux)
-
-Комплексный скрипт для настройки v2rayNG на Android без ПК.
-Решает проблему «курицы и яйца» — работает до первого запуска прокси.
-
-### Использование
-
-```bash
-# Установите Termux из F-Droid, затем:
-pkg install curl
-curl -sSL https://raw.githubusercontent.com/ZDarow/V_2_R_A_Y_N/main/scripts/mobile-setup-termux.sh | bash
-```
-
-### Что делает (v1.2.0)
-
-```
- 1. Проверка: Termux, v2rayNG, termux-api
- 2. Загрузка geoip.dat / geosite.dat (retry 3x, offline fallback)
- 3. Загрузка v2rayng-routing-russia.json / v2rayng-only-blocked.json
- 4. Копирование всех файлов в Android/data/com.v2ray.ang/files/assets/
- 5. Выбор пресета → копирование в буфер обмена
- 6. Авто-открытие v2rayNG (am start)
- 7. Deep link для подписки (v2rayng://install-sub/)
- 8. Инструкция: 2 тапа для импорта + настройка IPOnDemand
-```
-
-## generate-mobile-url.sh — генерация VLESS URL
-
-Генерирует VLESS-ссылку для импорта в v2rayNG из JSON-конфига Xray.
-
-### Использование
-
-```bash
-./scripts/generate-mobile-url.sh [путь_к_config.json]
-./scripts/generate-mobile-url.sh config/config-template-xray.json
-```
-
-Если аргумент не указан — использует `config/config-template-xray.json`.
-
 ## install.sh / uninstall.sh
 
 См. [install.md](install.md) — документация установки и деинсталляции.
@@ -252,8 +170,4 @@ curl -sSL https://raw.githubusercontent.com/ZDarow/V_2_R_A_Y_N/main/scripts/mobi
 | `update-rules.sh` | Обновление geoip/geosite (retry, SHA256, lock) | runetfreedom release | Linux |
 | `proxy-toggle.sh` | Вкл/выкл системного прокси | — | Linux (GNOME/KDE) |
 | `proxy_set_linux_sh.sh` | Библиотека для прокси | — | Linux (GNOME/KDE) |
-| `deploy-mobile.sh` | Деплой конфигов на Android (ZIP/ADB/HTTP) | runetfreedom + репозиторий | Android (v2rayNG) |
-| `mobile-setup-termux.sh` | Полная автонастройка v2rayNG через Termux | runetfreedom + репозиторий | Android (Termux) |
-| `mobile-apply-routing.sh` | Применение правил роутинга в 2 тапа | репозиторий | Android (Termux) |
-| `generate-mobile-url.sh` | Генерация VLESS URL из JSON | — | Linux |
 | `lib/common.sh` | Общая библиотека (retry, SHA256, lock, лог) | — | Linux |

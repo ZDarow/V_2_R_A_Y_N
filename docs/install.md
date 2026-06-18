@@ -35,7 +35,7 @@ cd V_2_R_A_Y_N
  3. Установка .NET 10.0     — dotnet-runtime-10.0 (+ MS repo fallback)
  4. Установка v2rayN        — загрузка .deb с GitHub, dpkg -i, symlink
  5. Установка geoip/geosite — retry 3x, SHA256 верификация, кэш fallback
- 6. Конфигурация            — 5 JSON: routing, only_blocked, config-template, v2rayng-*
+ 6. Конфигурация            — 3 JSON: routing, only_blocked, config-template
  7. Скрипты управления      — proxy-toggle, proxy_set, update-rules (+ systemd timer)
  8. Импорт подписок         — 4 подписки в SQLite (guiNDB.db)
  9. Системный прокси        — GNOME (gsettings) или KDE (kwriteconfig)
@@ -79,10 +79,8 @@ cd V_2_R_A_Y_N
 Копируются файлы в целевые директории:
 | Файл | Назначение | Целевая директория |
 |------|-----------|-------------------|
-| `routing-russia.json` | Роутинг «Всё через прокси» (v2rayN object) | `~/.config/v2rayN/` |
-| `only_blocked.json` | Роутинг «Только заблокированное» (v2rayN object) | `~/.config/v2rayN/` |
-| `v2rayng-routing-russia.json` | Роутинг «Всё через прокси» (v2rayNG array) | `~/.config/v2rayN/` |
-| `v2rayng-only-blocked.json` | Роутинг «Только заблокированное» (v2rayNG array) | `~/.config/v2rayN/` |
+ | `routing-russia.json` | Роутинг «Всё через прокси» | `~/.config/v2rayN/` |
+| `only_blocked.json` | Роутинг «Только заблокированное» | `~/.config/v2rayN/` |
 | `config-template-xray.json` | Шаблон Xray-core | `~/.local/share/v2rayN/binConfigs/` |
 
 #### 7. Скрипты управления + авто-обновление
@@ -110,11 +108,10 @@ journalctl --user -u v2rayn-rules-update.service
 ```
 
 #### 8. Импорт подписок
-Создаётся таблица `SubItem` в `guiNDB.db` (если не существует) и добавляются 4 подписки:
+Создаётся таблица `SubItem` в `guiNDB.db` (если не существует) и добавляются подписки:
 1. **BLACK-RUS-001** — Чёрные списки РФ (весь трафик через VPN), интервал 1440 мин
 2. **WHITE-RUS-001** — Белые списки РФ, интервал 1440 мин
 3. **WL-ZIENG2-001** — WL от zieng2, интервал 60 мин
-4. **WHITELIST-IPS-001** — CIDR/IP от hxehex, интервал 60 мин
 
 Используется `INSERT OR IGNORE` — существующие подписки не перезаписываются.
 

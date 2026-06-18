@@ -44,8 +44,6 @@ jobs:
           errors=0
           files="install.sh uninstall.sh lib/common.sh scripts/update-rules.sh \
             scripts/proxy-toggle.sh scripts/proxy_set_linux_sh.sh \
-            scripts/deploy-mobile.sh scripts/generate-mobile-url.sh \
-            scripts/mobile-setup-termux.sh scripts/mobile-apply-routing.sh \
             scripts/status.sh scripts/diagnose.sh scripts/kill-switch.sh \
             scripts/migrate-allowinsecure.sh"
           for f in $files; do
@@ -68,9 +66,7 @@ jobs:
             install.sh uninstall.sh \
             lib/common.sh \
             scripts/update-rules.sh scripts/proxy-toggle.sh \
-            scripts/proxy_set_linux_sh.sh scripts/deploy-mobile.sh \
-            scripts/generate-mobile-url.sh scripts/mobile-setup-termux.sh \
-            scripts/mobile-apply-routing.sh \
+            scripts/proxy_set_linux_sh.sh \
             scripts/status.sh scripts/diagnose.sh scripts/kill-switch.sh \
             scripts/migrate-allowinsecure.sh
           do
@@ -99,17 +95,14 @@ jobs:
             echo "  OK"
           done
           [ "$errors" -eq 0 ] || { echo "JSON validation failed: $errors file(s) with errors"; exit 1; }
-      - name: Validate JSON Schema (v2rayNG routing)
+      - name: Validate JSON Schema (Xray config)
         run: |
           if command -v ajv &>/dev/null; then
-            for f in config/v2rayng-routing-russia.json config/v2rayng-only-blocked.json; do
-              echo "Schema check: $f"
-              ajv validate -s spec/json-schema/routing-rules.json -d "$f" || {
-                echo "SCHEMA ERROR: $f"
-                exit 1
-              }
-            done
-            echo "All JSON Schema checks passed"
+            ajv validate -s spec/json-schema/xray-config.json -d config/config-template-xray.json || {
+              echo "SCHEMA ERROR: config/config-template-xray.json"
+              exit 1
+            }
+            echo "Xray config JSON Schema check passed"
           else
             echo "ajv not available, skipping schema validation"
           fi
@@ -141,7 +134,7 @@ jobs:
           errors=0
           for f in \
             README.md CHANGELOG.md \
-            docs/README.md docs/install.md docs/mobile.md \
+            docs/README.md docs/install.md \
             docs/routing.md docs/scripts.md docs/ci.md docs/faq.md \
             subscriptions/README.md
           do

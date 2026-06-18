@@ -392,12 +392,11 @@ copy_config() {
 copy_config "$SCRIPT_DIR/config/routing-russia.json" "$V2RAYN_CONFIG_DIR/routing-russia.json" "routing-russia.json"
 copy_config "$SCRIPT_DIR/config/config-template-xray.json" "$V2RAYN_BINCONFIG_DIR/config-template-xray.json" "config-template-xray.json"
 copy_config "$SCRIPT_DIR/config/only_blocked.json" "$V2RAYN_CONFIG_DIR/only_blocked.json" "only_blocked.json (мобильный режим)"
-copy_config "$SCRIPT_DIR/config/v2rayng-routing-russia.json" "$V2RAYN_CONFIG_DIR/v2rayng-routing-russia.json" "v2rayng-routing-russia.json (v2rayNG формат)"
-copy_config "$SCRIPT_DIR/config/v2rayng-only-blocked.json" "$V2RAYN_CONFIG_DIR/v2rayng-only-blocked.json" "v2rayng-only-blocked.json (v2rayNG формат)"
+
 # Предупреждение о allowInsecure
-info "⚠️  ВНИМАНИЕ: Xray-core ОТКЛЮЧИТ allowInsecure с 1 августа 2026."
-info "   Используйте «Отпечаток сертификата» (pinnedPeerCertSha256) в настройках подписки."
-info "   Проверка существующих конфигов: ~/.local/share/v2rayN/scripts/migrate-allowinsecure.sh"
+info "⚠️  Xray-core v26.2.6+ УЖЕ удалил allowInsecure."
+info "   Используйте pinnedPeerCertSha256 в настройках подписки."
+info "   Проверка: ~/.local/share/v2rayN/scripts/migrate-allowinsecure.sh"
 
 # ---- 7. Скрипты управления + авто-обновление ----
 header "Установка скриптов управления"
@@ -503,17 +502,14 @@ if command -v sqlite3 &>/dev/null && [ "${#SELECTED_SUBS[@]}" -gt 0 ]; then
         BLACK-RUS-001)
           sqlite3 "$DB_PATH" "INSERT OR IGNORE INTO SubItem (Id, Remarks, Url, MoreUrl, Enabled, Sort, AutoUpdateInterval, ConvertTarget)
             VALUES ('BLACK-RUS-001', 'Чёрные списки РФ (весь трафик через VPN)',
-              'https://raw.githubusercontent.com/igareck/vpn-configs-for-russia/refs/heads/main/BLACK_VLESS_RUS_mobile.txt',
-              'https://raw.githubusercontent.com/igareck/vpn-configs-for-russia/refs/heads/main/BLACK_VLESS_RUS.txt
-          https://raw.githubusercontent.com/igareck/vpn-configs-for-russia/refs/heads/main/BLACK_SS+All_RUS.txt',
+              'https://raw.githubusercontent.com/igareck/vpn-configs-for-russia/refs/heads/main/BLACK_VLESS_RUS.txt',
+              'https://raw.githubusercontent.com/igareck/vpn-configs-for-russia/refs/heads/main/BLACK_SS+All_RUS.txt',
               1, 1, 1440, 'v2ray');" 2>/dev/null || warn "  BLACK-RUS-001: ошибка импорта" ;;
         WHITE-RUS-001)
           sqlite3 "$DB_PATH" "INSERT OR IGNORE INTO SubItem (Id, Remarks, Url, MoreUrl, Enabled, Sort, AutoUpdateInterval, ConvertTarget)
             VALUES ('WHITE-RUS-001', 'Белые списки РФ (только РФ через VPN)',
-              'https://raw.githubusercontent.com/igareck/vpn-configs-for-russia/refs/heads/main/Vless-Reality-White-Lists-Rus-Mobile.txt',
-              'https://raw.githubusercontent.com/igareck/vpn-configs-for-russia/refs/heads/main/Vless-Reality-White-Lists-Rus-Mobile-2.txt
-          https://raw.githubusercontent.com/igareck/vpn-configs-for-russia/refs/heads/main/WHITE-CIDR-RU-all.txt
-          https://raw.githubusercontent.com/igareck/vpn-configs-for-russia/refs/heads/main/WHITE-CIDR-RU-checked.txt
+              'https://raw.githubusercontent.com/igareck/vpn-configs-for-russia/refs/heads/main/WHITE-CIDR-RU-all.txt',
+              'https://raw.githubusercontent.com/igareck/vpn-configs-for-russia/refs/heads/main/WHITE-CIDR-RU-checked.txt
           https://raw.githubusercontent.com/igareck/vpn-configs-for-russia/refs/heads/main/WHITE-SNI-RU-all.txt',
               1, 2, 1440, 'v2ray');" 2>/dev/null || warn "  WHITE-RUS-001: ошибка импорта" ;;
         WL-ZIENG2-001)
@@ -522,13 +518,6 @@ if command -v sqlite3 &>/dev/null && [ "${#SELECTED_SUBS[@]}" -gt 0 ]; then
               'https://raw.githubusercontent.com/zieng2/wl/main/vless_universal.txt',
               'https://codeberg.org/zieng2/wl/raw/branch/main/vless_universal.txt',
               1, 3, 60, 'v2ray');" 2>/dev/null || warn "  WL-ZIENG2-001: ошибка импорта" ;;
-        WHITELIST-IPS-001)
-          sqlite3 "$DB_PATH" "INSERT OR IGNORE INTO SubItem (Id, Remarks, Url, MoreUrl, Enabled, Sort, AutoUpdateInterval, ConvertTarget)
-            VALUES ('WHITELIST-IPS-001', 'Whitelist IP (hxehex) — CIDR для мобильных',
-              'https://raw.githubusercontent.com/hxehex/russia-mobile-internet-whitelist/main/cidrwhitelist.txt',
-              'https://raw.githubusercontent.com/hxehex/russia-mobile-internet-whitelist/main/ipwhitelist.txt
-          https://raw.githubusercontent.com/hxehex/russia-mobile-internet-whitelist/main/whitelist.txt',
-              1, 4, 60, 'v2ray');" 2>/dev/null || warn "  WHITELIST-IPS-001: ошибка импорта" ;;
       esac
     done
     info "Подписки импортированы в БД v2rayN"

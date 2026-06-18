@@ -29,10 +29,10 @@
 - `scripts/update-rules.sh`
 - `scripts/proxy-toggle.sh`
 - `scripts/proxy_set_linux_sh.sh`
-- `scripts/deploy-mobile.sh`
-- `scripts/generate-mobile-url.sh`
-- `scripts/mobile-setup-termux.sh`
-- `scripts/mobile-apply-routing.sh`
+- `scripts/status.sh`
+- `scripts/diagnose.sh`
+- `scripts/kill-switch.sh`
+- `scripts/migrate-allowinsecure.sh`
 
 **Уровень:** `warning` (ошибки и предупреждения).
 
@@ -45,9 +45,9 @@ for f in \
   install.sh uninstall.sh \
   lib/common.sh \
   scripts/update-rules.sh scripts/proxy-toggle.sh \
-  scripts/proxy_set_linux_sh.sh scripts/deploy-mobile.sh \
-  scripts/generate-mobile-url.sh scripts/mobile-setup-termux.sh \
-  scripts/mobile-apply-routing.sh
+  scripts/proxy_set_linux_sh.sh scripts/status.sh \
+  scripts/diagnose.sh scripts/kill-switch.sh \
+  scripts/migrate-allowinsecure.sh
 do
   bash -n "$f" || errors=$((errors+1))
 done
@@ -72,8 +72,6 @@ done
 - `config/routing-russia.json`
 - `config/config-template-xray.json`
 - `config/only_blocked.json`
-- `config/v2rayng-routing-russia.json`
-- `config/v2rayng-only-blocked.json`
 
 ### 4. Markdown Check (`markdown-check`)
 
@@ -82,7 +80,7 @@ done
 ```bash
 for f in \
   README.md CHANGELOG.md \
-  docs/README.md docs/install.md docs/mobile.md \
+  docs/README.md docs/install.md \
   docs/routing.md docs/scripts.md docs/ci.md docs/faq.md \
   subscriptions/README.md
 do

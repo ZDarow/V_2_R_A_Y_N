@@ -49,6 +49,10 @@ guiNDB.db
 *.db-wal
 *.db-shm
 
+# === Python ===
+__pycache__/
+*.pyc
+
 # === Временные файлы ===
 /tmp/
 *.tmp

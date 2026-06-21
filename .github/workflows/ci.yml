@@ -58,6 +58,7 @@ jobs:
             mobile/scripts/mobile-setup-termux.sh
             lib/sync-time.sh
             gui/install-gui.sh
+            v2rayNG/compile-hevtun.sh
           "
           for f in $files; do
             if [ -f "$f" ]; then
@@ -92,6 +93,7 @@ jobs:
             mobile/scripts/mobile-setup-termux.sh
             lib/sync-time.sh
             gui/install-gui.sh
+            v2rayNG/compile-hevtun.sh
           do
             if [ -f "$f" ]; then
               echo "Checking $f..."

@@ -193,7 +193,7 @@ log_header "v2rayN Russia Rules Updater"
 mkdir -p "$BIN_DIR" "$CACHE_DIR"
 
 # Блокировка конкурентного запуска
-if ! acquire_lock; then
+if ! acquire_lock "$@"; then
   log_warn "Предыдущий запуск ещё выполняется. Выход."
   exit 1
 fi

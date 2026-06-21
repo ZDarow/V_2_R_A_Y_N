@@ -454,6 +454,25 @@ else
   warn "Файлы systemd не найдены. Timer не установлен."
 fi
 
+# ---- 7b. Установка logrotate ----
+header "Настройка logrotate (ротация логов)"
+LOGROTATE_SRC="$SCRIPT_DIR/lib/logrotate/v2rayn"
+if [ -f "$LOGROTATE_SRC" ]; then
+  if [ "$DRY_RUN" = true ]; then
+    echo "  [DRY-RUN] sudo cp $LOGROTATE_SRC → /etc/logrotate.d/v2rayn"
+  else
+    if sudo cp "$LOGROTATE_SRC" /etc/logrotate.d/v2rayn 2>/dev/null; then
+      info "logrotate: /etc/logrotate.d/v2rayn установлен"
+      info "  Логи ротируются еженедельно, хранятся 4 недели"
+    else
+      warn "logrotate: не удалось установить (нужен sudo)"
+      warn "  Установите вручную: sudo cp $LOGROTATE_SRC /etc/logrotate.d/v2rayn"
+    fi
+  fi
+else
+  warn "logrotate: конфиг не найден ($LOGROTATE_SRC)"
+fi
+
 # ---- 8. Импорт подписок в БД v2rayN ----
 header "Импорт подписок в v2rayN"
 DB_PATH="$V2RAYN_GUICONFIG_DIR/guiNDB.db"

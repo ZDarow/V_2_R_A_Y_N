@@ -3,6 +3,7 @@
 
 # === Chat logs ===
 chat-*.txt
+Аудит/
 
 # === CI artifact logs ===
 logs_*

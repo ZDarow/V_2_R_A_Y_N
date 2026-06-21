@@ -121,6 +121,7 @@ download_with_mirrors() {
     local url="$base_url/$name"
     info "  Попытка: $base_url"
     if download_file "$url" "$dest"; then
+      # shellcheck disable=SC2012
       info "  $name: загружен ($(ls -lh "$dest" | awk '{print $5}'))"
       return 0
     fi
@@ -154,8 +155,17 @@ done
 
 # ---- 3. Копирование конфигов ----
 if [ "$RULES_ONLY" = false ]; then
-  for cfg in routing-russia.json only_blocked.json config-template-xray.json v2rayng-routing-russia.json v2rayng-only-blocked.json; do
+  for cfg in routing-russia.json only_blocked.json config-template-xray.json; do
     src="$REPO_DIR/config/$cfg"
+    if [ -f "$src" ]; then
+      cp "$src" "$ANDROID_DIR/$cfg"
+      info "  $cfg: скопирован"
+    else
+      warn "  $cfg: не найден в config/"
+    fi
+  done
+  for cfg in v2rayng-routing-russia.json v2rayng-only-blocked.json; do
+    src="$REPO_DIR/mobile/config/$cfg"
     if [ -f "$src" ]; then
       cp "$src" "$ANDROID_DIR/$cfg"
       info "  $cfg: скопирован"

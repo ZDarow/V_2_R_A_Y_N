@@ -20,12 +20,10 @@ step()  { echo -e "\n${BLUE}━━━ $* ━━━${NC}"; }
 _script_dir="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 readonly SCRIPT_DIR="$_script_dir"
 readonly V2RAYN_CONFIG_DIR="${HOME}/.config/v2rayN"
-readonly V2RAYN_DATA_DIR="${HOME}/.local/share/v2rayN"
-readonly V2RAYN_SCRIPTS_DIR="${V2RAYN_DATA_DIR}/bin"
 readonly SYSTEMD_USER_DIR="${HOME}/.config/systemd/user"
 _backup_ts="$(date +%Y%m%d-%H%M%S)"
 readonly BACKUP_DIR="${HOME}/.cache/v2rayN-backups/${_backup_ts}"
-readonly ANDROID_DIR="${SCRIPT_DIR}/android"
+readonly ANDROID_DIR="${SCRIPT_DIR}/mobile/config"
 
 # ─── Флаги ───────────────────────────────────────────────────────────
 APPLY_ALL=false
@@ -140,7 +138,7 @@ apply_routing() {
     for f in "$routing_dir"/routing-*.json "$routing_dir"/only_blocked.json; do
         [[ ! -f "$f" ]] && continue
         validate_json "$f"
-        safe_copy "$f" "${V2RAYN_SCRIPTS_DIR}/$(basename "$f")"
+        safe_copy "$f" "${V2RAYN_CONFIG_DIR}/$(basename "$f")"
         count=$((count + 1))
     done
     
@@ -226,7 +224,11 @@ apply_systemd() {
     done
     
     if ! $DRY_RUN; then
-        systemctl --user daemon-reload 2>/dev/null && info "systemd daemon перезагружен" || warn "Не удалось перезагрузить systemd"
+        if systemctl --user daemon-reload 2>/dev/null; then
+            info "systemd daemon перезагружен"
+        else
+            warn "Не удалось перезагрузить systemd"
+        fi
     fi
     
     return 0
@@ -240,7 +242,7 @@ apply_mobile() {
         error "adb не установлен. Установите: sudo apt install android-tools-adb"
     fi
     
-    if ! adb devices | grep -q "device$"; then
+    if ! adb devices 2>/dev/null | awk '$2 == "device" {found=1; exit} END {exit !found}'; then
         error "Android-устройство не подключено. Проверьте USB-отладку."
     fi
     
@@ -250,7 +252,7 @@ apply_mobile() {
     fi
     
     local device_id
-    device_id=$(adb devices | grep "device$" | awk '{print $1}' | head -1)
+    device_id=$(adb devices 2>/dev/null | awk '$2 == "device" {print $1; exit}')
     info "Устройство: $device_id"
     
     # Определяем пакет v2rayNG
@@ -300,7 +302,11 @@ restart_service() {
     fi
     
     if systemctl --user is-active --quiet v2rayn.service 2>/dev/null; then
-        systemctl --user restart v2rayn.service && info "v2rayN перезапущен" || warn "Не удалось перезапустить v2rayN"
+        if systemctl --user restart v2rayn.service; then
+            info "v2rayN перезапущен"
+        else
+            warn "Не удалось перезапустить v2rayN"
+        fi
     else
         warn "v2rayN не запущен — пропуск перезапуска"
     fi

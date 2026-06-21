@@ -3,8 +3,7 @@
 
 set -uo pipefail
 
-# Цвета для терминала
-R='\033[0;31m'; G='\033[0;32m'; Y='\033[1;33m'; B='\033[0;34m'; N='\033[0m'
+
 
 # Проверка zenity
 if ! command -v zenity &>/dev/null; then
@@ -12,6 +11,9 @@ if ! command -v zenity &>/dev/null; then
     echo "Установите: sudo apt install zenity"
     exit 1
 fi
+
+# Путь к скриптам v2rayN (устанавливаются install.sh в ~/.local/share/v2rayN/scripts/)
+SCRIPTS_DIR="${HOME}/.local/share/v2rayN/scripts"
 
 # ─── Функции получения статуса ─────────────────────────────────────
 
@@ -24,7 +26,7 @@ get_xray_status() {
 }
 
 get_proxy_status() {
-    local mode=$(gsettings get org.gnome.system.proxy mode 2>/dev/null | tr -d "'")
+    local mode; mode=$(gsettings get org.gnome.system.proxy mode 2>/dev/null | tr -d "'")
     if [[ "$mode" == "manual" ]]; then
         echo "✅ Прокси: ВКЛ"
     else
@@ -33,15 +35,15 @@ get_proxy_status() {
 }
 
 get_ip_info() {
-    local direct_ip=$(curl -s -m 3 https://ipinfo.io/ip 2>/dev/null || echo "нет")
-    local proxy_ip=$(curl -s -m 3 --socks5-hostname 127.0.0.1:10808 https://ipinfo.io/ip 2>/dev/null || echo "нет")
+    local direct_ip; direct_ip=$(curl -s -m 3 https://ipinfo.io/ip 2>/dev/null || echo "нет")
+    local proxy_ip; proxy_ip=$(curl -s -m 3 --socks5-hostname 127.0.0.1:10808 https://ipinfo.io/ip 2>/dev/null || echo "нет")
     echo "Прямой: $direct_ip | Прокси: $proxy_ip"
 }
 
 get_speed() {
-    local speed=$(curl -s -o /dev/null -w "%{speed_download}" -m 5 http://speedtest.tele2.net/1MB.zip 2>/dev/null)
+    local speed; speed=$(curl -s -o /dev/null -w "%{speed_download}" -m 5 http://speedtest.tele2.net/1MB.zip 2>/dev/null)
     if [[ -n "$speed" && "$speed" != "0" ]]; then
-        local speed_mb=$(echo "scale=2; $speed / 1024 / 1024" | bc 2>/dev/null || echo "N/A")
+        local speed_mb; speed_mb=$(echo "scale=2; $speed / 1024 / 1024" | bc 2>/dev/null || echo "N/A")
         echo "${speed_mb} MB/s"
     else
         echo "N/A"
@@ -92,23 +94,26 @@ action_proxy_off() {
 }
 
 action_diagnose() {
-    if [[ -f "$HOME/netcheck.sh" ]]; then
-        ~/netcheck.sh 2>&1 | zenity --text-info --width=700 --height=500 --title="Диагностика сети" --font="Monospace 9"
+    local script="${SCRIPTS_DIR}/netcheck.sh"
+    if [[ -f "$script" ]]; then
+        bash "$script" 2>&1 | zenity --text-info --width=700 --height=500 --title="Диагностика сети" --font="Monospace 9"
     else
-        zenity --error --text="Скрипт netcheck.sh не найден" --width=300
+        zenity --error --text="Скрипт netcheck.sh не найден в ${SCRIPTS_DIR}" --width=400
     fi
 }
 
 action_mobile_diagnose() {
-    if [[ -f "$HOME/mobile-netcheck.sh" ]]; then
-        ~/mobile-netcheck.sh 2>&1 | zenity --text-info --width=700 --height=500 --title="Диагностика мобильного" --font="Monospace 9"
+    local script="${SCRIPTS_DIR}/mobile-netcheck.sh"
+    if [[ -f "$script" ]]; then
+        bash "$script" 2>&1 | zenity --text-info --width=700 --height=500 --title="Диагностика мобильного" --font="Monospace 9"
     else
-        zenity --error --text="Скрипт mobile-netcheck.sh не найден" --width=300
+        zenity --error --text="Скрипт mobile-netcheck.sh не найден в ${SCRIPTS_DIR}" --width=400
     fi
 }
 
 action_traffic_capture() {
-    if [[ -f "$HOME/traffic-capture.sh" ]]; then
+    local script="${SCRIPTS_DIR}/traffic-capture.sh"
+    if [[ -f "$script" ]]; then
         # Интерактивный выбор теста
         test_type=$(zenity --list --title="Захват трафика" --text="Выберите тип теста:" \
             --column="Тест" \
@@ -119,16 +124,16 @@ action_traffic_capture() {
             "Все тесты" --width=400 --height=300)
         
         case "$test_type" in
-            "DNS-запросы") ~/traffic-capture.sh --dns ;;
-            "HTTPS (порт 443)") ~/traffic-capture.sh --https ;;
-            "SNI-блокировка") ~/traffic-capture.sh --sni ;;
-            "Полный захват (30 сек)") ~/traffic-capture.sh --full ;;
-            "Все тесты") ~/traffic-capture.sh --all ;;
+            "DNS-запросы") bash "$script" --dns ;;
+            "HTTPS (порт 443)") bash "$script" --https ;;
+            "SNI-блокировка") bash "$script" --sni ;;
+            "Полный захват (30 сек)") bash "$script" --full ;;
+            "Все тесты") bash "$script" --all ;;
         esac
         
-        zenity --info --text="✅ Захват завершён\nФайлы: ~/traffic-captures/" --timeout=3 --width=300
+        zenity --info --text="✅ Захват завершён\nФайлы: ${SCRIPTS_DIR}/traffic-captures/" --timeout=3 --width=300
     else
-        zenity --error --text="Скрипт traffic-capture.sh не найден" --width=300
+        zenity --error --text="Скрипт traffic-capture.sh не найден в ${SCRIPTS_DIR}" --width=400
     fi
 }
 
@@ -145,24 +150,26 @@ action_view_config() {
 }
 
 action_restore() {
-    if [[ -f "$HOME/restore-all.sh" ]]; then
+    local script="${SCRIPTS_DIR}/restore-all.sh"
+    if [[ -f "$script" ]]; then
         if zenity --question --text="Восстановить все настройки?\nЭто сбросит прокси и перезапустит Xray" --width=300; then
-            ~/restore-all.sh 2>&1 | zenity --text-info --width=700 --height=500 --title="Восстановление" --font="Monospace 9"
+            bash "$script" 2>&1 | zenity --text-info --width=700 --height=500 --title="Восстановление" --font="Monospace 9"
             zenity --info --text="✅ Восстановление завершено" --timeout=2 --width=300
         fi
     else
-        zenity --error --text="Скрипт restore-all.sh не найден" --width=300
+        zenity --error --text="Скрипт restore-all.sh не найден в ${SCRIPTS_DIR}" --width=400
     fi
 }
 
 action_optimize() {
-    if [[ -f "$HOME/optimize-mobile.sh" ]]; then
+    local script="${SCRIPTS_DIR}/optimize-mobile.sh"
+    if [[ -f "$script" ]]; then
         if zenity --question --text="Применить оптимизацию для мобильного интернета?\nMTU, TCP BBR, маскировка Host" --width=300; then
-            ~/optimize-mobile.sh 2>&1 | zenity --text-info --width=700 --height=500 --title="Оптимизация" --font="Monospace 9"
+            bash "$script" 2>&1 | zenity --text-info --width=700 --height=500 --title="Оптимизация" --font="Monospace 9"
             zenity --info --text="✅ Оптимизация применена" --timeout=2 --width=300
         fi
     else
-        zenity --error --text="Скрипт optimize-mobile.sh не найден" --width=300
+        zenity --error --text="Скрипт optimize-mobile.sh не найден в ${SCRIPTS_DIR}" --width=400
     fi
 }
 

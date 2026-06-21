@@ -19,6 +19,7 @@ DURATION=30  # Длительность захвата в секундах
 # Тестовые домены
 BLOCKED_SITES=("twitter.com" "facebook.com" "instagram.com" "linkedin.com" "discord.com")
 RUSSIAN_SITES=("gosuslugi.ru" "yandex.ru" "vk.com" "mail.ru")
+# shellcheck disable=SC2034 # зарезервировано для будущих тестов
 DNS_SERVERS=("8.8.8.8" "1.1.1.1" "77.88.8.8")
 
 mkdir -p "$CAPTURE_DIR"
@@ -177,7 +178,7 @@ test_fragmentation() {
     echo "  Тест MTU:"
     for mtu in 1500 1492 1460 1400 1360 1300; do
         echo -n "    MTU $mtu: "
-        if ping -c 1 -M do -s $((mtu - 28)) 8.8.8.8 &>/dev/null; then
+        if ping -c 1 -M "do" -s $((mtu - 28)) 8.8.8.8 &>/dev/null; then
             echo -e "${G}✓${N} работает"
         else
             echo -e "${R}✗${N} фрагментируется/блокируется"
@@ -271,6 +272,7 @@ analyze_captures() {
     step "Анализ захваченных файлов"
     
     echo -e "  ${C}Сохранённые pcap-файлы:${N}"
+    # shellcheck disable=SC2012
     ls -lh "$CAPTURE_DIR"/*.pcap 2>/dev/null | awk '{print "    " $9 " (" $5 ")"}'
     
     echo -e "\n  ${C}Для анализа в Wireshark:${N}"
@@ -345,7 +347,7 @@ main() {
         esac
         
         echo ""
-        read -p "Нажмите Enter для продолжения..."
+        read -r -p "Нажмите Enter для продолжения..."
     done
 }
 

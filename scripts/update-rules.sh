@@ -25,6 +25,7 @@ LIB_DIR="$(cd "$SCRIPT_DIR/../lib" && pwd)"
 
 # Подключаем общую библиотеку
 if [ -f "$LIB_DIR/common.sh" ]; then
+  # shellcheck disable=SC1091 # source file resolved at runtime
   source "$LIB_DIR/common.sh"
 else
   # Fallback: минимальные функции, если lib/common.sh не найден

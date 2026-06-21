@@ -14,6 +14,7 @@ step() { echo -e "\n${B}━━━ $* ━━━${N}"; }
 XRAY_BIN="$HOME/.local/share/v2rayN/bin/xray/xray"
 CONFIG="$HOME/.config/v2rayN/config.json"
 XRAY_DIR="$HOME/.local/share/v2rayN/bin/xray"
+# shellcheck disable=SC2034 # зарезервировано для будущего использования
 BIN_DIR="$HOME/.local/share/v2rayN/bin"
 
 echo -e "${C}╔═══════════════════════════════════════════════════╗${N}"

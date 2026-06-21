@@ -69,7 +69,7 @@ if [ -n "$BACKUP_DIR" ]; then
 fi
 
 # 1. Kill-switch (iptables)
-if command -v iptables &>/dev/null && iptables -L V2RAYN &>/dev/null 2>&1; then
+if command -v iptables &>/dev/null && (sudo iptables -L V2RAYN &>/dev/null 2>&1 || iptables -L V2RAYN &>/dev/null 2>&1); then
   info "Отключение kill-switch (iptables)..."
   if sudo -n true 2>/dev/null; then
     sudo iptables -D OUTPUT -j V2RAYN 2>/dev/null || true

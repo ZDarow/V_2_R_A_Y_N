@@ -41,7 +41,7 @@ info "IP-адрес интерфейса: $ip_addr"
 step "2. Оператор и геолокация"
 direct_ip=$(curl -s -m 5 https://ipinfo.io/ip 2>/dev/null)
 if [[ -n "$direct_ip" ]]; then
-    ip_info=$(curl -s -m 5 https://ipinfo.io/$direct_ip 2>/dev/null)
+    ip_info=$(curl -s -m 5 "https://ipinfo.io/$direct_ip" 2>/dev/null)
     org=$(echo "$ip_info" | jq -r '.org // "неизвестно"' 2>/dev/null)
     city=$(echo "$ip_info" | jq -r '.city // "неизвестно"' 2>/dev/null)
     region=$(echo "$ip_info" | jq -r '.region // "неизвестно"' 2>/dev/null)
@@ -84,7 +84,7 @@ fi
 
 # Тест MTU с разными размерами
 for test_mtu in 1500 1492 1460 1400 1300; do
-    if ping -c 1 -M do -s $((test_mtu - 28)) 8.8.8.8 &>/dev/null; then
+    if ping -c 1 -M "do" -s $((test_mtu - 28)) 8.8.8.8 &>/dev/null; then
         ok "MTU $test_mtu работает"
         break
     else

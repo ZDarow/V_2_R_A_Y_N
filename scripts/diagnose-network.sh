@@ -22,17 +22,13 @@ set -u -o pipefail
 readonly SCRIPT_NAME="diagnose-network.sh"
 readonly SCRIPT_VERSION="2.0.0"
 
-TIMESTAMP=$(date '+%Y-%m-%d %H:%M:%S %Z')
-readonly TIMESTAMP
-TIMESTAMP_FILE=$(date '+%Y%m%d-%H%M%S')
-readonly TIMESTAMP_FILE
+TIMESTAMP=""
+TIMESTAMP_FILE=""
 
 readonly REPORT_DIR="${HOME}/.local/share/v2rayN/logs"
-readonly REPORT_FILE="${REPORT_DIR}/network-diagnostic-${TIMESTAMP_FILE}.log"
-readonly JSON_FILE="${REPORT_DIR}/network-diagnostic-${TIMESTAMP_FILE}.json"
-TMP_DIR=$(mktemp -d "/tmp/diag-network-XXXXXX")
-readonly TMP_DIR
-trap 'rm -rf "${TMP_DIR:-}" 2>/dev/null' EXIT
+REPORT_FILE=""
+JSON_FILE=""
+TMP_DIR=""
 
 # Флаги
 MODE="full"                    # full | quick | security | connectivity | section
@@ -58,6 +54,12 @@ SKIPPED=0
 declare -a RECOMMENDATIONS=()
 declare -a CHECK_LOG=()
 declare -A JSON_DATA=()
+
+# Проверка bash 4.3+ (требуется для ассоциативных массивов)
+if [ "${BASH_VERSINFO[0]:-0}" -lt 4 ] || { [ "${BASH_VERSINFO[0]:-0}" -eq 4 ] && [ "${BASH_VERSINFO[1]:-0}" -lt 3 ]; }; then
+  echo "Ошибка: требуется bash 4.3+ (текущая: ${BASH_VERSION})" >&2
+  exit 1
+fi
 
 # ==============================================================================
 #  ДВИЖОК — БАЗОВЫЕ ФУНКЦИИ
@@ -106,7 +108,8 @@ recommend() { RECOMMENDATIONS+=("$1"); }
 run_cmd() {
   local label="$1" cmd="$2" optional="${3:-false}"
   report "  >> ${label}"
-  if eval "$cmd" >> "$REPORT_FILE" 2>&1; then return 0; fi
+  # shellcheck disable=SC2086
+  if bash -c "$cmd" >> "$REPORT_FILE" 2>&1; then return 0; fi
   if [ "$optional" = "true" ]; then return 0; fi
   return 1
 }
@@ -327,11 +330,13 @@ check_deps() {
     fi
     if [ ${#pip_pkgs[@]} -gt 0 ] && [ "$AUTO_INSTALL" = true ]; then
       if cmd_exists pip3; then
-        pip3 install --quiet "${pip_pkgs[@]}" 2>/dev/null && \
-          report "  >> pip: ${pip_pkgs[*]} установлены" || true
+        if pip3 install --quiet "${pip_pkgs[@]}" 2>/dev/null; then
+          report "  >> pip: ${pip_pkgs[*]} установлены"
+        fi
       elif cmd_exists pip; then
-        pip install --quiet "${pip_pkgs[@]}" 2>/dev/null && \
-          report "  >> pip: ${pip_pkgs[*]} установлены" || true
+        if pip install --quiet "${pip_pkgs[@]}" 2>/dev/null; then
+          report "  >> pip: ${pip_pkgs[*]} установлены"
+        fi
       fi
     fi
   fi
@@ -443,7 +448,11 @@ section_01_system() {
     local aa_status
     aa_status=$(cat /sys/module/apparmor/parameters/enabled 2>/dev/null)
     json_set "system" "apparmor" "${aa_status}"
-    [ "$aa_status" = "Y" ] && report "  AppArmor: включён" || report "  AppArmor: выключен"
+    if [ "$aa_status" = "Y" ]; then
+      report "  AppArmor: включён"
+    else
+      report "  AppArmor: выключен"
+    fi
   fi
 
   # Виртуализация
@@ -802,7 +811,11 @@ section_04_dns() {
     for name in "${dns_names[@]}"; do
       local resolved_ip
       resolved_ip=$(nslookup "$name" 2>/dev/null | grep -A1 'Name:' | grep -oP 'Address: \K[0-9.]+' | head -1)
-      [ -n "$resolved_ip" ] && ok "Резолвинг ${name}: ${resolved_ip}" || warn "Резолвинг ${name}: не удался"
+      if [ -n "$resolved_ip" ]; then
+        ok "Резолвинг ${name}: ${resolved_ip}"
+      else
+        warn "Резолвинг ${name}: не удался"
+      fi
     done
   else
     warn "dig и nslookup не найдены — DNS-тесты пропущены"
@@ -949,8 +962,8 @@ section_06_firewall() {
     subsection "iptables — filter OUTPUT"
     run_cmd "iptables -L OUTPUT -n" "sudo iptables -L OUTPUT -n --line-numbers 2>/dev/null || iptables -L OUTPUT -n --line-numbers 2>/dev/null || echo '(требуются права root)'" true
 
-    # V2RAYN chain
-    if iptables -L V2RAYN &>/dev/null 2>&1; then
+    # V2RAYN chain (проверка с sudo, т.к. iptables требует root)
+    if sudo iptables -L V2RAYN &>/dev/null 2>&1 || iptables -L V2RAYN &>/dev/null 2>&1; then
       ok "Цепочка V2RAYN (kill-switch) активна"
       json_set "firewall" "v2rayn_chain" "active"
       run_cmd "iptables V2RAYN" "iptables -L V2RAYN -n --line-numbers 2>/dev/null || sudo iptables -L V2RAYN -n --line-numbers 2>/dev/null" true
@@ -1190,19 +1203,23 @@ section_08_tun() {
     recommend "Загрузите TUN: sudo modprobe tun && echo tun | sudo tee -a /etc/modules"
   fi
 
-  # Модуль ядра
+  # Модуль ядра (tun может быть модулем или встроен в ядро)
   local tun_module=false
   if grep -q '^tun ' /proc/modules 2>/dev/null; then
     tun_module=true
   elif lsmod 2>/dev/null | grep -q '^tun'; then
     tun_module=true
+  elif grep -q '^tun$' "/lib/modules/$(uname -r)/modules.builtin" 2>/dev/null; then
+    tun_module=true
+  elif modinfo tun 2>/dev/null | grep -q '(builtin)'; then
+    tun_module=true
   fi
-  json_set "tun" "module_loaded" "${tun_module}"
+  json_set "tun" "module_available" "${tun_module}"
   if $tun_module; then
-    ok "Модуль tun загружен"
+    ok "Модуль TUN доступен (загружен или встроен в ядро)"
   else
-    warn "Модуль tun не загружен"
-    recommend "Добавьте tun в /etc/modules: echo tun | sudo tee -a /etc/modules"
+    warn "Модуль TUN не найден"
+    recommend "Установите TUN: sudo modprobe tun && echo tun | sudo tee -a /etc/modules"
   fi
 
   # Активные TUN-интерфейсы
@@ -1656,7 +1673,11 @@ section_12_security() {
     local dnssec
     dnssec=$(dig +dnssec google.com 2>/dev/null | grep 'flags:' | grep -oP 'ad' || echo "N/A")
     json_set "security" "dnssec" "${dnssec}"
-    [ "$dnssec" = "ad" ] && ok "DNSSEC: подтверждён" || report "  DNSSEC: не проверен (это нормально для клиента)"
+    if [ "$dnssec" = "ad" ]; then
+      ok "DNSSEC: подтверждён"
+    else
+      report "  DNSSEC: не проверен (это нормально для клиента)"
+    fi
   fi
 
   # Проверка на общедоступные IPv4/IPv6
@@ -1921,8 +1942,34 @@ parse_args() {
 main() {
   parse_args "$@"
 
-  # Создаём директорию
+  # Инициализация с уникальным таймстемпом
+  TIMESTAMP=$(date '+%Y-%m-%d %H:%M:%S %Z')
+  TIMESTAMP_FILE=$(date '+%Y%m%d-%H%M%S')
+  REPORT_FILE="${REPORT_DIR}/network-diagnostic-${TIMESTAMP_FILE}.log"
+  JSON_FILE="${REPORT_DIR}/network-diagnostic-${TIMESTAMP_FILE}.json"
+  TMP_DIR=$(mktemp -d "/tmp/diag-network-XXXXXX")
+
+  # Создаём директорию отчётов
   mkdir -p "$REPORT_DIR" 2>/dev/null || true
+
+  # Блокировка — предотвращаем конкурентный запуск
+  local lock_dir="${REPORT_DIR}/.lock"
+  if ! mkdir "$lock_dir" 2>/dev/null; then
+    local lock_pid
+    lock_pid=$(cat "${lock_dir}/pid" 2>/dev/null || echo "unknown")
+    if [ "$lock_pid" != "unknown" ] && ! kill -0 "$lock_pid" 2>/dev/null; then
+      rm -rf "$lock_dir" 2>/dev/null
+      mkdir "$lock_dir" 2>/dev/null || {
+        echo -e "${RED}[✗]${NC} Не удалось создать lock"
+        exit 1
+      }
+    else
+      echo -e "${RED}[✗]${NC} Диагностика уже запущена (pid=${lock_pid}, lock: ${lock_dir})"
+      exit 1
+    fi
+  fi
+  echo "$$" > "${lock_dir}/pid"
+  trap 'rm -rf "${TMP_DIR:-}" "${lock_dir:-}" 2>/dev/null' EXIT
 
   # Инициализируем отчёт
   {

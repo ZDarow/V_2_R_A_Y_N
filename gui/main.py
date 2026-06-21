@@ -85,7 +85,9 @@ class TextViewBuffer:
         self.textview.set_editable(False)
         self.textview.set_cursor_visible(False)
         self.textview.set_wrap_mode(Gtk.WrapMode.WORD_CHAR)
-        self.textview.set_font(Pango.FontDescription("monospace 9"))
+        css = Gtk.CssProvider()
+        css.load_from_data(b"textview { font: 9pt monospace; }")
+        self.textview.get_style_context().add_provider(css, Gtk.STYLE_PROVIDER_PRIORITY_APPLICATION)
         self.scrolled = Gtk.ScrolledWindow()
         self.scrolled.set_policy(Gtk.PolicyType.AUTOMATIC, Gtk.PolicyType.AUTOMATIC)
         self.scrolled.set_vexpand(True)
@@ -391,9 +393,12 @@ class TabDiagnostics:
         self.box.set_margin_start(12)
         self.box.set_margin_end(12)
 
-        # Кнопки
-        btn_box = Gtk.Box(orientation=Gtk.Orientation.HORIZONTAL, spacing=6)
-        btn_box.set_wrap(True)
+        # Кнопки в FlowBox с переносом строк
+        btn_box = Gtk.FlowBox()
+        btn_box.set_max_children_per_line(3)
+        btn_box.set_selection_mode(Gtk.SelectionMode.NONE)
+        btn_box.set_column_spacing(6)
+        btn_box.set_row_spacing(6)
 
         diag_buttons = [
             ("🚀 Быстрая диагностика", "diagnose-quick",
@@ -412,7 +417,7 @@ class TabDiagnostics:
         for label, name, cmd in diag_buttons:
             btn = Gtk.Button(label=label)
             btn.connect("clicked", self._run_diag, name, cmd)
-            btn_box.pack_start(btn, False, False, 0)
+            btn_box.insert(btn, -1)
 
         self.box.pack_start(btn_box, False, False, 0)
 
@@ -442,8 +447,11 @@ class TabInstall:
         self.box.set_margin_start(12)
         self.box.set_margin_end(12)
 
-        btn_box = Gtk.Box(orientation=Gtk.Orientation.HORIZONTAL, spacing=6)
-        btn_box.set_wrap(True)
+        btn_box = Gtk.FlowBox()
+        btn_box.set_max_children_per_line(3)
+        btn_box.set_selection_mode(Gtk.SelectionMode.NONE)
+        btn_box.set_column_spacing(6)
+        btn_box.set_row_spacing(6)
 
         buttons = [
             ("📥 Установить v2rayN", "install", ["bash", get_script_path("install")]),
@@ -459,7 +467,7 @@ class TabInstall:
         for label, name, cmd in buttons:
             btn = Gtk.Button(label=label)
             btn.connect("clicked", self._run_install, name, cmd)
-            btn_box.pack_start(btn, False, False, 0)
+            btn_box.insert(btn, -1)
 
         self.box.pack_start(btn_box, False, False, 0)
 
@@ -489,8 +497,11 @@ class TabMobile:
         self.box.set_margin_start(12)
         self.box.set_margin_end(12)
 
-        btn_box = Gtk.Box(orientation=Gtk.Orientation.HORIZONTAL, spacing=6)
-        btn_box.set_wrap(True)
+        btn_box = Gtk.FlowBox()
+        btn_box.set_max_children_per_line(3)
+        btn_box.set_selection_mode(Gtk.SelectionMode.NONE)
+        btn_box.set_column_spacing(6)
+        btn_box.set_row_spacing(6)
 
         buttons = [
             ("📱 Деплой (ADB)", "deploy-adb",
@@ -508,7 +519,7 @@ class TabMobile:
         for label, name, cmd in buttons:
             btn = Gtk.Button(label=label)
             btn.connect("clicked", self._run_mobile, name, cmd)
-            btn_box.pack_start(btn, False, False, 0)
+            btn_box.insert(btn, -1)
 
         self.box.pack_start(btn_box, False, False, 0)
 

@@ -3,7 +3,6 @@
 set -euo pipefail
 
 GUI_DIR="$(cd "$(dirname "$0")" && pwd)"
-PROJECT_DIR="$(dirname "$GUI_DIR")"
 
 # Иконка
 sudo cp "$GUI_DIR/icons/v2rayn-manager.svg" /usr/share/icons/hicolor/scalable/apps/v2rayn-manager.svg 2>/dev/null || true

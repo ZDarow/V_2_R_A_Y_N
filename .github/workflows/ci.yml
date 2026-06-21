@@ -56,6 +56,8 @@ jobs:
             mobile/scripts/generate-mobile-url.sh
             mobile/scripts/mobile-apply-routing.sh
             mobile/scripts/mobile-setup-termux.sh
+            lib/sync-time.sh
+            gui/install-gui.sh
           "
           for f in $files; do
             if [ -f "$f" ]; then
@@ -88,6 +90,8 @@ jobs:
             mobile/scripts/generate-mobile-url.sh \
             mobile/scripts/mobile-apply-routing.sh \
             mobile/scripts/mobile-setup-termux.sh
+            lib/sync-time.sh
+            gui/install-gui.sh
           do
             if [ -f "$f" ]; then
               echo "Checking $f..."
@@ -168,8 +172,8 @@ jobs:
           errors=0
           for f in \
             README.md CHANGELOG.md \
-            docs/INDEX.md docs/INSTALL.md docs/USAGE.md docs/ARCHITECTURE.md \
-            docs/CONFIGURATION.md docs/SCRIPTS.md docs/TROUBLESHOOTING.md \
+            docs/INDEX.md docs/USAGE.md docs/ARCHITECTURE.md \
+            docs/CONFIGURATION.md docs/TROUBLESHOOTING.md \
             docs/ci.md docs/faq.md \
             subscriptions/README.md mobile/docs/mobile.md
           do

@@ -473,6 +473,36 @@ else
   warn "logrotate: конфиг не найден ($LOGROTATE_SRC)"
 fi
 
+# ---- 7c. Установка GUI ----
+header "Установка v2rayN Manager GUI"
+GUI_SRC="$SCRIPT_DIR/gui"
+if [ -f "$GUI_SRC/main.py" ]; then
+  if [ "$DRY_RUN" = true ]; then
+    echo "  [DRY-RUN] Установка GUI: иконка → /usr/share/icons/"
+    echo "  [DRY-RUN] Установка GUI: main.py → /usr/local/bin/v2rayn-manager"
+    echo "  [DRY-RUN] Установка GUI: desktop → ~/.local/share/applications/"
+  else
+    # Иконка
+    sudo cp "$GUI_SRC/icons/v2rayn-manager.svg" /usr/share/icons/hicolor/scalable/apps/v2rayn-manager.svg 2>/dev/null || true
+    sudo gtk-update-icon-cache /usr/share/icons/hicolor/ 2>/dev/null || true
+
+    # Главный скрипт
+    sudo cp "$GUI_SRC/main.py" /usr/local/bin/v2rayn-manager
+    sudo chmod +x /usr/local/bin/v2rayn-manager
+
+    # Desktop entry
+    mkdir -p "$HOME/.local/share/applications"
+    cp "$GUI_SRC/v2rayn-manager.desktop" "$HOME/.local/share/applications/v2rayn-manager.desktop"
+    sed -i "s|Icon=v2rayn-manager|Icon=/usr/share/icons/hicolor/scalable/apps/v2rayn-manager.svg|" \
+      "$HOME/.local/share/applications/v2rayn-manager.desktop"
+
+    info "v2rayN Manager GUI установлен"
+    info "  Запуск: v2rayn-manager (или через меню приложений)"
+  fi
+else
+  warn "GUI: main.py не найден в $GUI_SRC"
+fi
+
 # ---- 8. Импорт подписок в БД v2rayN ----
 header "Импорт подписок в v2rayN"
 DB_PATH="$V2RAYN_GUICONFIG_DIR/guiNDB.db"

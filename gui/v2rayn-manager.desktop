@@ -1,0 +1,12 @@
+[Desktop Entry]
+Type=Application
+Name=v2rayN Manager
+Name[ru]=v2rayN Менеджер
+Comment=Управление прокси, диагностика сети, обновление правил
+Comment[ru]=Управление прокси, диагностика сети, обновление правил
+Exec=/usr/local/bin/v2rayn-manager
+Icon=v2rayn-manager
+Terminal=false
+Categories=Network;Utility;System;
+Keywords=vpn;proxy;v2ray;xray;russia;
+StartupNotify=true

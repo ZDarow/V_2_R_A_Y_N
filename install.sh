@@ -479,15 +479,21 @@ GUI_SRC="$SCRIPT_DIR/gui"
 if [ -f "$GUI_SRC/main.py" ]; then
   if [ "$DRY_RUN" = true ]; then
     echo "  [DRY-RUN] Установка GUI: иконка → /usr/share/icons/"
-    echo "  [DRY-RUN] Установка GUI: main.py → /usr/local/bin/v2rayn-manager"
+    echo "  [DRY-RUN] Установка GUI: main.py → /usr/local/bin/v2rayn-manager.py"
+    echo "  [DRY-RUN] Установка GUI: shell wrapper → /usr/local/bin/v2rayn-manager"
     echo "  [DRY-RUN] Установка GUI: desktop → ~/.local/share/applications/"
   else
     # Иконка
     sudo cp "$GUI_SRC/icons/v2rayn-manager.svg" /usr/share/icons/hicolor/scalable/apps/v2rayn-manager.svg 2>/dev/null || true
     sudo gtk-update-icon-cache /usr/share/icons/hicolor/ 2>/dev/null || true
 
-    # Главный скрипт
-    sudo cp "$GUI_SRC/main.py" /usr/local/bin/v2rayn-manager
+    # Главный скрипт (Python)
+    sudo cp "$GUI_SRC/main.py" /usr/local/bin/v2rayn-manager.py
+    sudo chmod +x /usr/local/bin/v2rayn-manager.py
+
+    # Обёртка (shell) — задаёт DISPLAY, если не установлен
+    printf '#!/bin/bash\nexport DISPLAY="${DISPLAY:-:0}"\nexec python3 /usr/local/bin/v2rayn-manager.py "$@"\n' | \
+      sudo tee /usr/local/bin/v2rayn-manager > /dev/null
     sudo chmod +x /usr/local/bin/v2rayn-manager
 
     # Desktop entry

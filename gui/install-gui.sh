@@ -9,7 +9,16 @@ sudo cp "$GUI_DIR/icons/v2rayn-manager.svg" /usr/share/icons/hicolor/scalable/ap
 sudo gtk-update-icon-cache /usr/share/icons/hicolor/ 2>/dev/null || true
 
 # Главный скрипт
-sudo cp "$GUI_DIR/main.py" /usr/local/bin/v2rayn-manager
+# Главный скрипт (Python)
+sudo cp "$GUI_DIR/main.py" /usr/local/bin/v2rayn-manager.py
+sudo chmod +x /usr/local/bin/v2rayn-manager.py
+
+# Обёртка (shell) — задаёт DISPLAY, если не установлен
+sudo bash -c 'cat > /usr/local/bin/v2rayn-manager << '"'"'EOF'"'"'
+#!/bin/bash
+export DISPLAY="${DISPLAY:-:0}"
+exec python3 /usr/local/bin/v2rayn-manager.py "$@"
+EOF'
 sudo chmod +x /usr/local/bin/v2rayn-manager
 
 # Desktop entry

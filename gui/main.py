@@ -207,9 +207,8 @@ class TabStatus:
 
         # Сетка статусов
         grid = Gtk.Grid()
-        grid.set_column_spacing(16)
-        grid.set_row_spacing(8)
-        grid.set_column_homogeneous(True)
+        grid.set_column_spacing(12)
+        grid.set_row_spacing(6)
 
         labels = [
             ("🖥 Платформа", "⏳", "platform"),
@@ -747,8 +746,9 @@ class TabConfig:
 class MainWindow:
     def __init__(self):
         self.window = Gtk.Window(title="v2rayN Manager")
-        self.window.set_default_size(900, 600)
+        self.window.set_default_size(960, 680)
         self.window.set_position(Gtk.WindowPosition.CENTER)
+        self.window.connect("map-event", self._on_first_map)
 
         # Устанавливаем иконку
         icon_path = os.path.join(os.path.dirname(__file__), "icons", "v2rayn.png")
@@ -761,10 +761,7 @@ class MainWindow:
         # Основной контейнер
         vbox = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=0)
 
-        # Notebook (вкладки)
-        notebook = Gtk.Notebook()
-        notebook.set_tab_pos(Gtk.PositionType.TOP)
-
+        # Notebook (вкладки) — обёрнут в ScrolledWindow, чтобы не растягивать окно
         self.tabs = {}
         tab_configs = [
             ("📊 Статус", TabStatus()),
@@ -776,12 +773,23 @@ class MainWindow:
             ("⚙️ Конфиг", TabConfig()),
         ]
 
-        for title, tab in tab_configs:
-            label = Gtk.Label(label=title)
-            notebook.append_page(tab.get_widget(), label)
-            self.tabs[title] = tab
+        notebook = Gtk.Notebook()
+        notebook.set_tab_pos(Gtk.PositionType.TOP)
+        notebook.set_scrollable(True)
 
-        vbox.pack_start(notebook, True, True, 0)
+        for name, tab in tab_configs:
+            lbl = Gtk.Label(label=name)
+            notebook.append_page(tab.get_widget(), lbl)
+            self.tabs[name] = tab
+
+        # ScrolledWindow отключает влияние notebook на размер окна
+        sw = Gtk.ScrolledWindow()
+        sw.set_policy(Gtk.PolicyType.NEVER, Gtk.PolicyType.AUTOMATIC)
+        sw.add(notebook)
+        sw.set_vexpand(True)
+        sw.set_hexpand(True)
+
+        vbox.pack_start(sw, True, True, 0)
 
         # Статус-бар
         self.statusbar = StatusBar(self.window)
@@ -807,6 +815,31 @@ class MainWindow:
 
     def _on_destroy(self, widget):
         Gtk.main_quit()
+
+    def _on_first_map(self, widget, event):
+        """После первого отображения — подгоняем размер под экран"""
+        display = self.window.get_display()
+        n_mon = display.get_n_monitors()
+        if n_mon > 0:
+            geo = display.get_monitor(0).get_geometry()
+            max_w = min(geo.width - 40, 1200)
+            max_h = min(geo.height - 80, 800)
+        else:
+            max_w, max_h = 960, 680
+        # Тройной ресайз с задержками — GTK может отменять resize()
+        GLib.idle_add(lambda: self._try_resize(max_w, max_h))
+        GLib.timeout_add(100, lambda: self._try_resize(max_w, max_h))
+        GLib.timeout_add(300, lambda: self._try_resize(max_w, max_h))
+        return False
+
+    def _try_resize(self, max_w, max_h):
+        cur_w, cur_h = self.window.get_size()
+        new_w = min(cur_w, max_w)
+        new_h = min(cur_h, max_h)
+        if new_w < cur_w or new_h < cur_h:
+            self.window.unmaximize()
+            self.window.resize(new_w, new_h)
+        return False
 
     def run(self):
         self.window.show_all()

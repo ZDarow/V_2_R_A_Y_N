@@ -2,6 +2,30 @@
 
 Все значимые изменения проекта v2rayN Russia Setup.
 
+## [1.0.0] — 2026-06-20
+
+### Added
+- `scripts/detect-block-type.sh` — определение типа блокировки (SNI/IP/Combined/CGNAT/BGP/UDP)
+- `scripts/rotate-sni.sh` — ротация SNI для обхода SNI-блокировок
+- `scripts/setup-two-server.sh` — настройка двухсерверной схемы (РФ→зарубежье)
+- `spec/mobile_spec.bash` — BATS тесты для мобильных скриптов (20 тестов)
+- `.env` — централизованная конфигурация проекта
+- `CONTRIBUTING.md` — правила для контрибьюторов
+- `.github/ISSUE_TEMPLATE.md` — шаблон для issue
+- `.github/PULL_REQUEST_TEMPLATE.md` — шаблон для PR
+- Git tag `v1.0.0` — первый стабильный релиз
+
+### Changed
+- `scripts/mobile-netcheck.sh` — расширен: CGNAT, BGP ASN, UDP порты, SNI vs IP тест (16 секций)
+- `scripts/optimize-mobile.sh` — переписан: автоподбор MTU, fragment TLS (tlshello), ротация SNI по whitelist-доменам, two-server инструкция
+- `.github/workflows/ci.yml` — восстановлен shellcheck (был случайно перезаписан), добавлены mobile-скрипты, CONTRIBUTING.md, валидация mobile/config/*.json
+- `README.md` — добавлены detect-block-type.sh, rotate-sni.sh, setup-two-server.sh
+- `subscriptions/README.md` — добавлены Tor Bridges (5 типов), hxehex whitelist, SourceHut, Bitbucket, Yandex
+- `config-template-xray.json` — обновлён с учётом fragment TLS
+
+### Removed
+- `1.txt` — Wireshark PCAP дамп (7.8 МБ, удалён из рабочей директории, в .gitignore через *.txt)
+
 ## [Unreleased]
 
 ### Added

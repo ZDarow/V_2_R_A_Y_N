@@ -264,6 +264,109 @@ echo -e "    • Шифрование: none (для Reality)"
 echo -e "    • Фрагментация: включена"
 echo -e "    • Порт: 443"
 
+# ─── 13. CGNAT (Carrier-Grade NAT) ─────────────────────────────────
+step "13. Проверка CGNAT (общий NAT оператора)"
+
+my_ip=$(curl -s -m 5 https://ipinfo.io/ip 2>/dev/null)
+if [[ -n "$my_ip" ]]; then
+    info "Внешний IP: $my_ip"
+    if echo "$my_ip" | grep -qE '^(100\.(6[4-9]|[7-9][0-9]|1[0-1][0-9]|12[0-7])\.)'; then
+        warn "⚠ Вы за CGNAT (100.64.0.0/10)! Проблемы с WireGuard/прямыми соединениями"
+        info "Решение: запросите у оператора выделенный внешний IP"
+    else
+        ok "IP НЕ в CGNAT"
+    fi
+else
+    fail "Не удалось получить внешний IP"
+fi
+
+# ─── 14. BGP ASN провайдера ────────────────────────────────────────
+step "14. BGP ASN провайдера (точная идентификация)"
+
+if [[ -n "$my_ip" ]]; then
+    asn_json=$(curl -s -m 5 "https://ipinfo.io/$my_ip/json" 2>/dev/null)
+    if command -v jq &>/dev/null && [[ -n "$asn_json" ]]; then
+        org=$(echo "$asn_json" | jq -r '.org // "неизвестно"')
+        asn=$(echo "$asn_json" | jq -r '.asn // "неизвестно"')
+        info "ASN: $asn"
+        info "Организация: $org"
+
+        # Определяем точного оператора по ASN-диапазонам
+        asn_num=$(echo "$asn" | sed 's/AS//')
+        case "$asn_num" in
+            31213|16035|51559)  ok "Оператор: Билайн (AS$asn_num)" ;;
+            8359|25513|41733)   ok "Оператор: МТС (AS$asn_num)" ;;
+            31246|12389|31257)  ok "Оператор: Мегафон (AS$asn_num)" ;;
+            25106|12714|44477)  ok "Оператор: Tele2 (AS$asn_num)" ;;
+            41044|61367)        ok "Оператор: Yota (AS$asn_num)" ;;
+            *)                  info "Организация: $org (AS$asn_num)" ;;
+        esac
+    fi
+fi
+
+# ─── 15. UDP-сканирование портов (WireGuard, QUIC) ─────────────────
+step "15. UDP-порты (WireGuard, QUIC, DoT)"
+
+udp_ports=(
+    "8.8.8.8:53"        # DNS
+    "1.1.1.1:443"        # QUIC
+    "1.1.1.1:853"        # DNS over QUIC
+    "1.1.1.1:51820"      # WireGuard (Cloudflare Warp)
+    "8.8.8.8:443"        # QUIC Google
+)
+for target in "${udp_ports[@]}"; do
+    ip="${target%:*}"
+    port="${target#*:}"
+    if timeout 3 bash -c "echo > /dev/udp/$ip/$port" 2>/dev/null; then
+        ok "UDP $target — доступен"
+    else
+        warn "UDP $target — НЕ доступен (может блокироваться)"
+    fi
+done
+
+# ─── 16. SNI vs IP тест (тип блокировки) ────────────────────────────
+step "16. Определение типа блокировки (SNI/IP/Combined)"
+
+BLOCKED_SNIS=("twitter.com" "facebook.com" "instagram.com" "discord.com")
+WHITELIST_SNI="yandex.ru"
+
+for domain in "${BLOCKED_SNIS[@]}"; do
+    ip=$(dig +short "$domain" 2>/dev/null | head -1)
+    [[ -z "$ip" ]] && continue
+
+    # TCP connect (проверка IP-блокировки)
+    tcp_ok=false
+    if timeout 3 bash -c "echo > /dev/tcp/$ip/443" 2>/dev/null; then
+        tcp_ok=true
+    fi
+
+    # TLS с оригинальным SNI (проверка SNI-блокировки)
+    tls_ok=false
+    if $tcp_ok && timeout 5 openssl s_client -connect "$ip:443" -servername "$domain" </dev/null 2>/dev/null | grep -q "CONNECTED"; then
+        tls_ok=true
+    fi
+
+    # Вывод
+    if $tcp_ok && $tls_ok; then
+        ok "$domain — полностью доступен"
+    elif $tcp_ok && ! $tls_ok; then
+        fail "$domain — TCP ok, TLS fail (SNI-блокировка!)"
+    elif ! $tcp_ok; then
+        fail "$domain — TCP fail (IP-блокировка или полный whitelist)"
+    fi
+done
+
+# Тест SNI-спуфинга (whitelist SNI + blocked IP)
+blocked_ip=$(dig +short twitter.com 2>/dev/null | head -1)
+if [[ -n "$blocked_ip" ]]; then
+    echo -n "  SNI-спуфинг (SNI=$WHITELIST_SNI через IP=$blocked_ip): "
+    if timeout 5 openssl s_client -connect "$blocked_ip:443" -servername "$WHITELIST_SNI" </dev/null 2>/dev/null | grep -q "CONNECTED"; then
+        ok "SNI-спуфинг РАБОТАЕТ (блокировка только по SNI)"
+    else
+        warn "SNI-спуфинг НЕ РАБОТАЕТ (IP-блокировка или combined)"
+    fi
+fi
+
 # ─── Итог ──────────────────────────────────────────────────────────
 echo -e "\n${C}╔═══════════════════════════════════════════════════╗${N}"
 echo -e "${C}║  Диагностика завершена                            ║${N}"

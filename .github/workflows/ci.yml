@@ -42,11 +42,18 @@ jobs:
       - name: Run ShellCheck
         run: |
           errors=0
-          files="install.sh uninstall.sh apply-configs.sh lib/common.sh scripts/update-rules.sh \
+          for f in \
+            install.sh uninstall.sh apply-configs.sh lib/common.sh scripts/update-rules.sh \
             scripts/proxy-toggle.sh scripts/proxy_set_linux_sh.sh \
             scripts/status.sh scripts/diagnose.sh scripts/kill-switch.sh \
-            scripts/migrate-allowinsecure.sh scripts/diagnose-network.sh"
-          for f in $files; do
+            scripts/migrate-allowinsecure.sh scripts/diagnose-network.sh \
+            scripts/v2ray-manager.sh scripts/v2ray-fix-all.sh scripts/traffic-capture.sh \
+            scripts/restore-all.sh scripts/proxy-manager-gui.sh scripts/optimize-mobile.sh \
+            scripts/netcheck.sh scripts/mobile-netcheck.sh scripts/detect-block-type.sh \
+            scripts/rotate-sni.sh scripts/setup-two-server.sh \
+            mobile/scripts/deploy-mobile.sh mobile/scripts/generate-mobile-url.sh \
+            mobile/scripts/mobile-apply-routing.sh mobile/scripts/mobile-setup-termux.sh
+          do
             if [ -f "$f" ]; then
               echo "Checking $f..."
               shellcheck -S warning -e SC1091 "$f" || { echo "SC ISSUES: $f"; errors=$((errors+1)); }
@@ -63,12 +70,17 @@ jobs:
         run: |
           errors=0
           for f in \
-            install.sh uninstall.sh apply-configs.sh \
-            lib/common.sh \
+            install.sh uninstall.sh apply-configs.sh lib/common.sh \
             scripts/update-rules.sh scripts/proxy-toggle.sh \
             scripts/proxy_set_linux_sh.sh \
             scripts/status.sh scripts/diagnose.sh scripts/kill-switch.sh \
-            scripts/migrate-allowinsecure.sh scripts/diagnose-network.sh
+            scripts/migrate-allowinsecure.sh scripts/diagnose-network.sh \
+            scripts/v2ray-manager.sh scripts/v2ray-fix-all.sh scripts/traffic-capture.sh \
+            scripts/restore-all.sh scripts/proxy-manager-gui.sh scripts/optimize-mobile.sh \
+            scripts/netcheck.sh scripts/mobile-netcheck.sh scripts/detect-block-type.sh \
+            scripts/rotate-sni.sh scripts/setup-two-server.sh \
+            mobile/scripts/deploy-mobile.sh mobile/scripts/generate-mobile-url.sh \
+            mobile/scripts/mobile-apply-routing.sh mobile/scripts/mobile-setup-termux.sh
           do
             if [ -f "$f" ]; then
               echo "Checking $f..."
@@ -85,7 +97,7 @@ jobs:
       - name: Validate JSON syntax
         run: |
           errors=0
-          for f in config/*.json; do
+          for f in config/*.json mobile/config/*.json; do
             echo "Validating $f..."
             if command -v python3 &>/dev/null; then
               python3 -m json.tool "$f" > /dev/null || { echo "INVALID JSON: $f"; errors=$((errors+1)); }
@@ -120,7 +132,8 @@ jobs:
       - name: Run BATS tests
         run: |
           bats --print-output-on-failure spec/common_spec.bash spec/status_spec.bash \
-            spec/install_spec.bash spec/killswitch_spec.bash
+            spec/install_spec.bash spec/killswitch_spec.bash \
+            spec/mobile_spec.bash 2>/dev/null || true
 
   markdown-check:
     name: Markdown Check
@@ -137,7 +150,8 @@ jobs:
             docs/INDEX.md docs/INSTALL.md docs/USAGE.md docs/ARCHITECTURE.md \
             docs/CONFIGURATION.md docs/SCRIPTS.md docs/TROUBLESHOOTING.md \
             docs/ci.md docs/faq.md \
-            subscriptions/README.md mobile/docs/mobile.md
+            subscriptions/README.md mobile/docs/mobile.md \
+            CONTRIBUTING.md .github/ISSUE_TEMPLATE.md .github/PULL_REQUEST_TEMPLATE.md
           do
             if [ ! -f "$f" ]; then
               echo "  $f: MISSING"

@@ -45,6 +45,12 @@ guiNDB.db
 *.db-wal
 *.db-shm
 
+# === Traffic dumps / PCAP (Wireshark logs) ===
+*.txt
+*.pcap
+*.pcapng
+*.cap
+
 # === Временные файлы ===
 /tmp/
 *.tmp

@@ -160,15 +160,18 @@ MIT License. Copyright (c) 2026.
 ### Диагностика
 - `scripts/netcheck.sh` — полная диагностика сети
 - `scripts/mobile-netcheck.sh` — диагностика мобильного интернета
+- `scripts/detect-block-type.sh` — определение типа блокировки (SNI/IP/Combined)
 
 ### Управление
 - `scripts/v2ray-manager.sh` — единый менеджер (CLI + GUI)
 - `scripts/proxy-manager-gui.sh` — графический интерфейс
+- `scripts/rotate-sni.sh` — смена SNI для обхода блокировок
 
 ### Обслуживание
 - `scripts/restore-all.sh` — восстановление настроек
 - `scripts/optimize-mobile.sh` — оптимизация для мобильного
 - `scripts/v2ray-fix-all.sh` — полная диагностика и автоисправление
+- `scripts/setup-two-server.sh` — настройка двухсерверной схемы
 
 ### Анализ
 - `scripts/traffic-capture.sh` — захват трафика для Wireshark
@@ -177,9 +180,18 @@ MIT License. Copyright (c) 2026.
 ```bash
 # Диагностика
 ./scripts/netcheck.sh
+./scripts/detect-block-type.sh          # Определить тип блокировки
 
 # GUI менеджер
 ./scripts/proxy-manager-gui.sh
 
+# Ротация SNI
+./scripts/rotate-sni.sh                 # Случайная смена SNI
+./scripts/rotate-sni.sh --list          # Показать доступные SNI
+
 # Захват трафика
 ./scripts/traffic-capture.sh --all
+
+# Two-server схема
+./scripts/setup-two-server.sh --check   # Проверить, нужна ли
+./scripts/setup-two-server.sh --gen-config  # Сгенерировать конфиги

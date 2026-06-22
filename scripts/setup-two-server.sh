@@ -95,6 +95,18 @@ do_check() {
 }
 
 # ─── Генерация конфигов ────────────────────────────────────────────
+# ─── Генерация ключей X25519 ──────────────────────────────────────────
+gen_x25519_keypair() {
+    local keypair
+    keypair=$(xray x25519 2>/dev/null) || {
+        # Плейсхолдеры, если xray недоступен
+        echo "Private key: PLACEHOLDER_PRIVATE_KEY_BASE64"
+        echo "Public key: PLACEHOLDER_PUBLIC_KEY_BASE64"
+        return
+    }
+    echo "$keypair"
+}
+
 do_gen_config() {
     step "2. Генерация конфигов Xray для two-server схемы"
     echo ""
@@ -108,6 +120,17 @@ do_gen_config() {
     read -rp "    IP зарубежного сервера: " foreign_ip
     read -rp "    Порт зарубежного сервера (по умолчанию 443): " foreign_port
     foreign_port="${foreign_port:-443}"
+
+    # Генерируем две разные пары ключей (РФ-сервер и зарубежный сервер)
+    local ru_kp foreign_kp
+    ru_kp=$(gen_x25519_keypair)
+    foreign_kp=$(gen_x25519_keypair)
+
+    local ru_priv ru_pub foreign_priv foreign_pub
+    ru_priv=$(echo "$ru_kp" | grep 'Private key' | awk '{print $NF}')
+    ru_pub=$(echo "$ru_kp" | grep 'Public key' | awk '{print $NF}')
+    foreign_priv=$(echo "$foreign_kp" | grep 'Private key' | awk '{print $NF}')
+    foreign_pub=$(echo "$foreign_kp" | grep 'Public key' | awk '{print $NF}')
 
     local ru_config="/tmp/xray-ru-server-config.json"
     local foreign_config="/tmp/xray-foreign-server-config.json"
@@ -131,8 +154,8 @@ do_gen_config() {
         "security": "reality",
         "realitySettings": {
           "dest": "www.microsoft.com:443",
-          "serverNames": ["microsoft.com"],
-          "privateKey": "$(xray x25519 2>/dev/null | grep 'Private key' | awk '{print $NF}')",
+          "serverNames": ["microsoft.com", "www.microsoft.com"],
+          "privateKey": "$ru_priv",
           "shortIds": ["0123456789abcdef"]
         }
       }
@@ -187,8 +210,8 @@ JSONEOF
         "security": "reality",
         "realitySettings": {
           "dest": "www.cloudflare.com:443",
-          "serverNames": ["cloudflare.com"],
-          "privateKey": "$(xray x25519 2>/dev/null | grep 'Private key' | awk '{print $NF}')",
+          "serverNames": ["cloudflare.com", "www.cloudflare.com"],
+          "privateKey": "$foreign_priv",
           "shortIds": ["0123456789abcdef"]
         }
       }
@@ -204,7 +227,7 @@ JSONEOF
 }
 JSONEOF
 
-    # Конфиг клиента (для v2rayN)
+    # Конфиг клиента (для v2rayN) — с publicKey РФ-сервера для REALITY
     cat > "$client_config" << JSONEOF
 {
   "log": { "loglevel": "warning" },
@@ -243,6 +266,7 @@ JSONEOF
         "realitySettings": {
           "serverName": "microsoft.com",
           "fingerprint": "chrome",
+          "publicKey": "$ru_pub",
           "shortIds": ["0123456789abcdef"]
         }
       }
@@ -262,15 +286,17 @@ JSONEOF
     echo "  Зарубежный:      $foreign_config"
     echo "  Клиент:          $client_config"
     echo ""
+    echo "  ${Y}Ключи REALITY (сохраните для отладки):${N}"
+    echo "  РФ-сервер  privateKey: $ru_priv"
+    echo "  РФ-сервер  publicKey:  $ru_pub"
+    echo "  Зарубежный privateKey: $foreign_priv"
+    echo "  Зарубежный publicKey:  $foreign_pub"
+    echo ""
     echo "  ${Y}Действия:${N}"
     echo "  1. Скопируйте xray-ru-server-config.json на РФ-сервер"
     echo "  2. Скопируйте xray-foreign-server-config.json на зарубежный сервер"
     echo "  3. Скопируйте xray-client-config.json в ~/.config/v2rayN/config.json"
     echo "  4. Запустите Xray на обоих серверах и клиенте"
-    echo ""
-    echo "  ${B}Важно:${N} сгенерируйте новый privateKey на каждом сервере:"
-    echo "    xray x25519"
-    echo "  И замените 'privateKey' в конфигах."
 }
 
 # ─── Main ───────────────────────────────────────────────────────────

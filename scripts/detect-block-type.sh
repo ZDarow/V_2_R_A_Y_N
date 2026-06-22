@@ -73,16 +73,14 @@ fetch_cidr_whitelist() {
 ip_in_cidr_whitelist() {
     local ip="$1"
     local cidr_file="$TMPDIR/cidr_whitelist.txt"
-    if [[ ! -f "$cidr_file" ]]; then
-        if command -v ipcalc &>/dev/null; then
-            while IFS= read -r cidr; do
-                [[ -z "$cidr" || "$cidr" =~ ^# ]] && continue
-                if ipcalc -c "$ip" "$cidr" &>/dev/null; then
-                    return 0
-                fi
-            done < "$cidr_file"
-        fi
-        return 1
+    [[ -f "$cidr_file" ]] || return 1
+    if command -v ipcalc &>/dev/null; then
+        while IFS= read -r cidr; do
+            [[ -z "$cidr" || "$cidr" =~ ^# ]] && continue
+            if ipcalc -c "$ip" "$cidr" &>/dev/null; then
+                return 0
+            fi
+        done < "$cidr_file"
     fi
     return 1
 }

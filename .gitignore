@@ -3,6 +3,7 @@
 
 # === Chat logs ===
 chat-*.txt
+Аудит/
 
 # === CI artifact logs ===
 logs_*
@@ -11,6 +12,9 @@ logs_*
 v2rayN.wiki/
 v2rayNG.wiki/
 v2rayNG/
+russia-mobile-internet-whitelist/
+russia-v2ray-rules-dat/
+vpn-configs-for-russia/
 
 # === Системные ===
 .DS_Store
@@ -50,6 +54,10 @@ guiNDB.db
 *.pcap
 *.pcapng
 *.cap
+
+# === Python ===
+__pycache__/
+*.pyc
 
 # === Временные файлы ===
 /tmp/

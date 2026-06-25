@@ -10,8 +10,10 @@
 #   ./scripts/kill-switch.sh {on|off|status}
 #
 # Принцип:
-#   - Разрешён только трафик через порты прокси (10808, 10809)
-#   - Разрешён DNS (53), loopback (lo)
+#   - Разрешён loopback (lo) — для подключения к локальному прокси
+#   - Разрешён трафик от процесса Xray (по UID владельца)
+#   - Разрешён DNS (53)
+#   - Разрешены уже установленные соединения
 #   - Весь остальной исходящий трафик блокируется
 # ============================================================================
 
@@ -47,12 +49,25 @@ enable() {
   check_iptables
 
   # Проверяем, не включён ли уже
-  if $IPTABLES -C OUTPUT -p tcp ! --dport "${PROXY_SOCKS}:${PROXY_HTTP}" -j REJECT --reject-with tcp-reset 2>/dev/null; then
+  if $IPTABLES -C OUTPUT -j V2RAYN 2>/dev/null; then
     warn "Kill-switch уже включён"
     return 0
   fi
 
-  info "Включение kill-switch..."
+  # Определяем UID процесса Xray (если запущен) или текущего пользователя
+  # ВАЖНО: owner UID пропускает ВЕСЬ трафик от указанного пользователя,
+  #        а не только от процесса xray. Для полной изоляции запускайте
+  #        xray под отдельным системным пользователем (--uid-owner xray).
+  XRAY_UID=""
+  if XRAY_PID=$(pgrep -f '/xray/xray' 2>/dev/null | head -1); then
+    XRAY_UID=$(stat -c '%u' "/proc/${XRAY_PID}" 2>/dev/null || true)
+  fi
+  if [ -z "${XRAY_UID}" ]; then
+    XRAY_UID=$(id -u)
+    warn "Xray не запущен, использую UID ${XRAY_UID} (текущий пользователь)"
+  fi
+
+  info "Включение kill-switch (UID xray: ${XRAY_UID})..."
 
   # Создаём цепочку V2RAYN
   $IPTABLES -N V2RAYN 2>/dev/null || true
@@ -60,20 +75,23 @@ enable() {
   # Очищаем цепочку (на случай повторного включения)
   $IPTABLES -F V2RAYN 2>/dev/null || true
 
-  # Разрешаем loopback
+  # Разрешаем loopback (для подключения к локальному прокси)
   $IPTABLES -A V2RAYN -o lo -j ACCEPT
+
+  # Разрешаем трафик от процесса Xray (по UID владельца)
+  # Это необходимо, чтобы xray мог делать исходящие соединения к серверу.
+  # owner UID ~ uid-1000 пропускает ВСЕ процессы mi, не только xray.
+  # Для полной изоляции: создайте пользователя xray и настройте запуск.
+  $IPTABLES -A V2RAYN -m owner --uid-owner "${XRAY_UID}" -j ACCEPT
 
   # Разрешаем уже установленные соединения
   $IPTABLES -A V2RAYN -m conntrack --ctstate ESTABLISHED,RELATED -j ACCEPT
 
-  # Разрешаем DNS (udp 53)
+  # Разрешаем DNS (udp 53/tcp 53)
   $IPTABLES -A V2RAYN -p udp --dport 53 -j ACCEPT
   $IPTABLES -A V2RAYN -p tcp --dport 53 -j ACCEPT
 
-  # Разрешаем трафик через прокси-порты v2rayN
-  $IPTABLES -A V2RAYN -p tcp --dport "${PROXY_SOCKS}:${PROXY_HTTP}" -j ACCEPT
-
-  # Разрешаем ICMP (ping)
+  # Разрешаем ICMP (ping, traceroute)
   $IPTABLES -A V2RAYN -p icmp -j ACCEPT
 
   # Блокируем всё остальное
@@ -85,7 +103,7 @@ enable() {
     warn "Цепочка V2RAYN уже подключена к OUTPUT, пропускаю"
   }
 
-  info "Kill-switch включён. Весь трафик кроме прокси :${PROXY_SOCKS}/:${PROXY_HTTP} заблокирован."
+  info "Kill-switch включён. Трафик кроме Xray/lo/DNS/ICMP блокирован."
 }
 
 # ---- Выключить kill-switch ----

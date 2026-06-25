@@ -43,16 +43,22 @@ jobs:
         run: |
           errors=0
           for f in \
-            install.sh uninstall.sh apply-configs.sh lib/common.sh scripts/update-rules.sh \
-            scripts/proxy-toggle.sh scripts/proxy_set_linux_sh.sh \
-            scripts/status.sh scripts/diagnose.sh scripts/kill-switch.sh \
+            install.sh uninstall.sh apply-configs.sh lib/common.sh \
+            scripts/update-rules.sh scripts/proxy-toggle.sh \
+            scripts/proxy_set_linux_sh.sh scripts/status.sh \
+            scripts/diagnose.sh scripts/kill-switch.sh \
             scripts/migrate-allowinsecure.sh scripts/diagnose-network.sh \
-            scripts/v2ray-manager.sh scripts/v2ray-fix-all.sh scripts/traffic-capture.sh \
-            scripts/restore-all.sh scripts/proxy-manager-gui.sh scripts/optimize-mobile.sh \
-            scripts/netcheck.sh scripts/mobile-netcheck.sh scripts/detect-block-type.sh \
-            scripts/rotate-sni.sh scripts/setup-two-server.sh \
-            mobile/scripts/deploy-mobile.sh mobile/scripts/generate-mobile-url.sh \
-            mobile/scripts/mobile-apply-routing.sh mobile/scripts/mobile-setup-termux.sh
+            scripts/netcheck.sh scripts/mobile-netcheck.sh \
+            scripts/proxy-manager-gui.sh scripts/traffic-capture.sh \
+            scripts/v2ray-manager.sh scripts/v2ray-fix-all.sh \
+            scripts/restore-all.sh scripts/optimize-mobile.sh \
+            scripts/detect-block-type.sh scripts/rotate-sni.sh \
+            scripts/setup-two-server.sh scripts/v2ray-health.sh \
+            mobile/scripts/deploy-mobile.sh \
+            mobile/scripts/generate-mobile-url.sh \
+            mobile/scripts/mobile-apply-routing.sh \
+            mobile/scripts/mobile-setup-termux.sh \
+            lib/sync-time.sh gui/install-gui.sh
           do
             if [ -f "$f" ]; then
               echo "Checking $f..."
@@ -79,8 +85,10 @@ jobs:
             scripts/restore-all.sh scripts/proxy-manager-gui.sh scripts/optimize-mobile.sh \
             scripts/netcheck.sh scripts/mobile-netcheck.sh scripts/detect-block-type.sh \
             scripts/rotate-sni.sh scripts/setup-two-server.sh \
+            scripts/v2ray-health.sh \
             mobile/scripts/deploy-mobile.sh mobile/scripts/generate-mobile-url.sh \
-            mobile/scripts/mobile-apply-routing.sh mobile/scripts/mobile-setup-termux.sh
+            mobile/scripts/mobile-apply-routing.sh mobile/scripts/mobile-setup-termux.sh \
+            lib/sync-time.sh gui/install-gui.sh
           do
             if [ -f "$f" ]; then
               echo "Checking $f..."
@@ -107,17 +115,32 @@ jobs:
             echo "  OK"
           done
           [ "$errors" -eq 0 ] || { echo "JSON validation failed: $errors file(s) with errors"; exit 1; }
-      - name: Validate JSON Schema (Xray config)
+      - name: Validate JSON Schema
         run: |
-          if command -v ajv &>/dev/null; then
-            ajv validate -s spec/json-schema/xray-config.json -d config/config-template-xray.json || {
-              echo "SCHEMA ERROR: config/config-template-xray.json"
-              exit 1
-            }
-            echo "Xray config JSON Schema check passed"
-          else
-            echo "ajv not available, skipping schema validation"
-          fi
+          pip install check-jsonschema 2>/dev/null || pip3 install check-jsonschema
+          for schema_file in spec/json-schema/xray-config.json mobile/spec/json-schema/routing-rules.json; do
+            schema_name="$(basename "$schema_file" .json)"
+            case "$schema_name" in
+              xray-config)
+                check-jsonschema --schemafile "$schema_file" config/config-template-xray.json || {
+                  echo "SCHEMA ERROR: config/config-template-xray.json vs $schema_file"
+                  exit 1
+                }
+                echo "✓ xray-config: schema passed"
+                ;;
+              routing-rules)
+                check-jsonschema --schemafile "$schema_file" config/routing-russia.json || {
+                  echo "SCHEMA ERROR: config/routing-russia.json vs $schema_file"
+                  exit 1
+                }
+                check-jsonschema --schemafile "$schema_file" config/only_blocked.json || {
+                  echo "SCHEMA ERROR: config/only_blocked.json vs $schema_file"
+                  exit 1
+                }
+                echo "✓ routing-rules: schema passed"
+                ;;
+            esac
+          done
 
   bats-tests:
     name: BATS Tests
@@ -143,14 +166,14 @@ jobs:
     steps:
       - uses: actions/checkout@v4
       - name: Install markdownlint
-        run: npm install -g markdownlint-cli2 2>/dev/null || sudo apt-get install -y -qq markdownlint 2>/dev/null || echo "markdownlint not available, falling back to basic check"
+        run: npm install -g markdownlint-cli2
       - name: Check markdown files
         run: |
           errors=0
           for f in \
             README.md CHANGELOG.md \
-            docs/INDEX.md docs/INSTALL.md docs/USAGE.md docs/ARCHITECTURE.md \
-            docs/CONFIGURATION.md docs/SCRIPTS.md docs/TROUBLESHOOTING.md \
+            docs/INDEX.md docs/USAGE.md docs/ARCHITECTURE.md \
+            docs/CONFIGURATION.md docs/TROUBLESHOOTING.md \
             docs/ci.md docs/faq.md \
             subscriptions/README.md mobile/docs/mobile.md \
             CONTRIBUTING.md .github/ISSUE_TEMPLATE.md .github/PULL_REQUEST_TEMPLATE.md
@@ -161,10 +184,6 @@ jobs:
               continue
             fi
             echo "  $f: OK ($(wc -l < "$f") lines)"
-            if command -v markdownlint &>/dev/null; then
-              markdownlint "$f" 2>/dev/null || { echo "  $f: lint warnings"; }
-            elif command -v markdownlint-cli2 &>/dev/null; then
-              markdownlint-cli2 "$f" 2>/dev/null || { echo "  $f: lint warnings"; }
-            fi
+            markdownlint-cli2 "$f" 2>&1 || { echo "  $f: lint warnings"; }
           done
           [ "$errors" -eq 0 ] || exit 1

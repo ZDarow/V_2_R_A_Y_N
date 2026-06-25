@@ -67,7 +67,7 @@ if [[ -f "$CONFIG" ]]; then
             ok "Inbounds: $inbounds | Outbounds: $outbounds"
             # Проверяем активный сервер
             active=$(jq -r '.outbounds[] | select(.tag=="proxy") | .settings.vnext[0].address // empty' "$CONFIG" 2>/dev/null)
-            [[ -n "$active" ]] && ok "Активный сервер: $active" || warn "Не найден outbound с тегом 'proxy'"
+            if [[ -n "$active" ]]; then ok "Активный сервер: $active"; else warn "Не найден outbound с тегом 'proxy'"; fi
         else
             fail "JSON невалиден!"
         fi
@@ -132,7 +132,7 @@ fi
 # ─── 8. Публичный IP ──────────────────────────────────────────────
 sec "8. Публичные IP"
 direct_ip=$(curl -sS -m 5 https://ipinfo.io/ip 2>/dev/null)
-[[ -n "$direct_ip" ]] && ok "Напрямую: $direct_ip" || warn "Не удалось получить прямой IP"
+if [[ -n "$direct_ip" ]]; then ok "Напрямую: $direct_ip"; else warn "Не удалось получить прямой IP"; fi
 
 if ss -tln 2>/dev/null | grep -q ":10808 "; then
     proxy_ip=$(curl -sS -m 5 --socks5-hostname 127.0.0.1:10808 https://ipinfo.io/ip 2>/dev/null)
@@ -154,7 +154,7 @@ dns=$(grep -m1 nameserver /etc/resolv.conf | awk '{print $2}')
 
 if command -v dig &>/dev/null; then
     resolved=$(dig +short google.com 2>/dev/null | head -1)
-    [[ -n "$resolved" ]] && ok "dig google.com → $resolved" || warn "dig google.com не резолвится"
+    if [[ -n "$resolved" ]]; then ok "dig google.com → $resolved"; else warn "dig google.com не резолвится"; fi
 elif command -v nslookup &>/dev/null; then
     resolved=$(nslookup google.com 2>/dev/null | awk '/^Address:/ {print $2; exit}')
     [[ -n "$resolved" ]] && ok "nslookup google.com → $resolved"
@@ -163,7 +163,7 @@ fi
 # ─── 10. Таблица маршрутов ────────────────────────────────────────
 sec "10. Маршруты"
 default_gw=$(ip route show default 2>/dev/null | awk '{print $3}' | head -1)
-[[ -n "$default_gw" ]] && ok "Шлюз по умолчанию: $default_gw" || fail "Нет default gateway"
+if [[ -n "$default_gw" ]]; then ok "Шлюз по умолчанию: $default_gw"; else fail "Нет default gateway"; fi
 ip route show | head -5 | sed 's/^/  /'
 
 # ─── 11. Системный прокси (GNOME/KDE) ────────────────────────────
@@ -181,7 +181,7 @@ fi
 
 # ─── 12. GUI окружение ───────────────────────────────────────────
 sec "12. GUI (для v2rayN)"
-[[ -n "${DISPLAY:-}" ]] && ok "DISPLAY=$DISPLAY" || warn "DISPLAY не установлен (systemd не запустит GUI)"
+if [[ -n "${DISPLAY:-}" ]]; then ok "DISPLAY=$DISPLAY"; else warn "DISPLAY не установлен (systemd не запустит GUI)"; fi
 [[ -n "${WAYLAND_DISPLAY:-}" ]] && ok "WAYLAND_DISPLAY=$WAYLAND_DISPLAY"
 [[ -n "${XDG_RUNTIME_DIR:-}" ]] && ok "XDG_RUNTIME_DIR=$XDG_RUNTIME_DIR"
 

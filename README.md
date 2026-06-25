@@ -4,6 +4,7 @@
 на территории Российской Федерации.
 
 [![CI](https://github.com/ZDarow/V_2_R_A_Y_N/actions/workflows/ci.yml/badge.svg)](https://github.com/ZDarow/V_2_R_A_Y_N/actions/workflows/ci.yml)
+[![Release](https://github.com/ZDarow/V_2_R_A_Y_N/actions/workflows/release.yml/badge.svg)](https://github.com/ZDarow/V_2_R_A_Y_N/actions/workflows/release.yml)
 
 ---
 
@@ -60,12 +61,13 @@ v2rayn &
 ## Флаги установщика
 
 ```bash
-./install.sh [--help] [--force-reinstall] [--skip-v2rayn] [--repo-url <url>]
+./install.sh [--help] [--dry-run] [--force-reinstall] [--skip-v2rayn] [--repo-url <url>]
 ```
 
 | Флаг | Описание |
 |------|----------|
 | `--help` | Показать справку |
+| `--dry-run` | Показать что будет сделано без реальных изменений |
 | `--force-reinstall` | Переустановить v2rayN, даже если уже установлен |
 | `--skip-v2rayn` | Не устанавливать v2rayN (только конфиги и подписки) |
 | `--repo-url <url>` | URL репозитория (по умолчанию: ZDarow/V_2_R_A_Y_N) |

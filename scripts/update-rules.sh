@@ -25,6 +25,7 @@ LIB_DIR="$(cd "$SCRIPT_DIR/../lib" && pwd)"
 
 # Подключаем общую библиотеку
 if [ -f "$LIB_DIR/common.sh" ]; then
+  # shellcheck disable=SC1091 # source file resolved at runtime
   source "$LIB_DIR/common.sh"
 else
   # Fallback: минимальные функции, если lib/common.sh не найден
@@ -192,7 +193,7 @@ log_header "v2rayN Russia Rules Updater"
 mkdir -p "$BIN_DIR" "$CACHE_DIR"
 
 # Блокировка конкурентного запуска
-if ! acquire_lock; then
+if ! acquire_lock "$@"; then
   log_warn "Предыдущий запуск ещё выполняется. Выход."
   exit 1
 fi

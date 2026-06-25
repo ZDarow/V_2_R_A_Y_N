@@ -1,0 +1,11 @@
+[Unit]
+Description=v2rayN HTTP Time Sync — ежечасовая синхронизация времени
+Documentation=https://github.com/ZDarow/V_2_R_A_Y_N
+
+[Timer]
+OnCalendar=hourly
+Persistent=true
+RandomizedDelaySec=300
+
+[Install]
+WantedBy=timers.target

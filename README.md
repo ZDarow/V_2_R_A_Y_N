@@ -50,7 +50,7 @@ v2rayn &
 | [⚙️ Конфигурация](docs/CONFIGURATION.md) | Все конфигурационные файлы, режимы роутинга |
 | [🔧 Скрипты](docs/SCRIPTS.md) | Справочник всех скриптов и библиотек |
 | [🛠 Устранение неполадок](docs/TROUBLESHOOTING.md) | Диагностика и решение проблем |
-| [❓ FAQ](docs/FAQ.md) | Часто задаваемые вопросы |
+| [❓ FAQ](docs/faq.md) | Часто задаваемые вопросы |
 | [🔄 CI/CD](docs/ci.md) | Непрерывная интеграция GitHub Actions |
 | [📱 Android](mobile/docs/mobile.md) | Настройка v2rayNG на Android |
 | [📋 Подписки](subscriptions/README.md) | Список подписок для импорта |
@@ -126,7 +126,7 @@ TLS-соединение с реальным сайтом (Microsoft, Cloudflare
 ./scripts/migrate-allowinsecure.sh
 ```
 
-Подробнее: [FAQ.md](docs/FAQ.md#allowinsecure--что-делать).
+Подробнее: [faq.md](docs/faq.md#allowinsecure--что-делать).
 
 ---
 

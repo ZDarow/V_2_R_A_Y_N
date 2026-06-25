@@ -41,6 +41,7 @@ info "Текущий MTU: $current_mtu"
 
 best_mtu=0
 for mtu in 1500 1492 1472 1460 1440 1420 1400 1380 1360 1340 1320 1300 1280; do
+    # shellcheck disable=SC1010
     if ping -c 1 -M do -s $((mtu - 28)) -W 1 8.8.8.8 &>/dev/null; then
         best_mtu=$mtu
     else

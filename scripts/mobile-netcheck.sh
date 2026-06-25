@@ -84,6 +84,7 @@ fi
 
 # Тест MTU с разными размерами
 for test_mtu in 1500 1492 1460 1400 1300; do
+    # shellcheck disable=SC1010
     if ping -c 1 -M do -s $((test_mtu - 28)) 8.8.8.8 &>/dev/null; then
         ok "MTU $test_mtu работает"
         break

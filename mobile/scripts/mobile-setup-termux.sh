@@ -65,7 +65,14 @@ fi
 
 info "Termux: обнаружен"
 
-if ! pm list packages 2>/dev/null | grep -q "com.v2ray.ang"; then
+V2RAYNG_PKG=""
+if pm list packages 2>/dev/null | grep -q "com.v2ray.ang.fdroid"; then
+  V2RAYNG_PKG="com.v2ray.ang.fdroid"
+elif pm list packages 2>/dev/null | grep -q "com.v2ray.ang"; then
+  V2RAYNG_PKG="com.v2ray.ang"
+fi
+
+if [ -z "$V2RAYNG_PKG" ]; then
   warn "v2rayNG не установлен."
   if [ "$NON_INTERACTIVE" = false ]; then
     warn "  https://github.com/2dust/v2rayNG/releases"
@@ -134,40 +141,68 @@ header "Загрузка geoip/geosite (runetfreedom release)"
 
 mkdir -p "$TEMP_DIR/assets"
 
-info "Загрузка geoip.dat..."
-if download_file "$RULES_RELEASE_URL/geoip.dat" "$TEMP_DIR/assets/geoip.dat"; then
+# Функция проверки SHA256 (упрощённая — для мобильного окружения)
+verify_dat_sha256() {
+  local data_file="$1" name="$2"
+  local sha_url="$RULES_RELEASE_URL/$name.sha256"
+  local sha_tmp; sha_tmp=$(mktemp)
+
+  if ! curl -sSL --connect-timeout 10 -o "$sha_tmp" "$sha_url" 2>/dev/null; then
+    rm -f "$sha_tmp"
+    echo "  ⚠️  Нет SHA256 checksum для проверки (пропускаем)"
+    return 2
+  fi
+
+  local expected; expected=$(cut -d' ' -f1 < "$sha_tmp" 2>/dev/null || echo "")
+  rm -f "$sha_tmp"
+
+  if [ -z "$expected" ]; then
+    echo "  ⚠️  Пустой SHA256 checksum (пропускаем)"
+    return 2
+  fi
+
+  local actual; actual=$(sha256sum "$data_file" 2>/dev/null | cut -d' ' -f1 || echo "")
+  if [ "$expected" = "$actual" ]; then
+    echo "  ✓ SHA256: OK"
+    return 0
+  else
+    echo "  ✗ SHA256: не совпадает"
+    return 1
+  fi
+}
+
+verify_dat() {
+  local name="$1"
+  local file="$TEMP_DIR/assets/$name"
+  if [ ! -f "$file" ] || [ ! -s "$file" ]; then
+    warn "  $name: пуст или отсутствует"
+    rm -f "$file"
+    # Offline fallback: пробуем скопировать существующий файл из assets
+    if [ -f "$V2RAYNG_ASSETS/$name" ] && [ -s "$V2RAYNG_ASSETS/$name" ]; then
+      cp -f "$V2RAYNG_ASSETS/$name" "$file"
+      info "  $name: восстановлен из assets/"
+    fi
+    return
+  fi
+  # SHA256 проверка
+  verify_dat_sha256 "$file" "$name" || true
   # shellcheck disable=SC2012
-  info "  geoip.dat: $(ls -lh "$TEMP_DIR/assets/geoip.dat" | awk '{print $5}')"
-else
-  warn "Не удалось загрузить geoip.dat"
-fi
+  info "  $name: $(ls -lh "$file" | awk '{print $5}')"
+}
+
+info "Загрузка geoip.dat..."
+download_file "$RULES_RELEASE_URL/geoip.dat" "$TEMP_DIR/assets/geoip.dat"
+verify_dat "geoip.dat"
 
 info "Загрузка geosite.dat..."
-if download_file "$RULES_RELEASE_URL/geosite.dat" "$TEMP_DIR/assets/geosite.dat"; then
-  # shellcheck disable=SC2012
-  info "  geosite.dat: $(ls -lh "$TEMP_DIR/assets/geosite.dat" | awk '{print $5}')"
-else
-  warn "Не удалось загрузить geosite.dat"
-fi
-
-# Валидация
-for f in geoip.dat geosite.dat; do
-  if [ ! -f "$TEMP_DIR/assets/$f" ] || [ ! -s "$TEMP_DIR/assets/$f" ]; then
-    warn "  $f: пуст или отсутствует"
-    rm -f "$TEMP_DIR/assets/$f"
-    # Offline fallback: пробуем скопировать существующий файл из assets
-    if [ -f "$V2RAYNG_ASSETS/$f" ] && [ -s "$V2RAYNG_ASSETS/$f" ]; then
-      cp -f "$V2RAYNG_ASSETS/$f" "$TEMP_DIR/assets/$f"
-      info "  $f: восстановлен из существующего файла в assets/"
-    fi
-  fi
-done
+download_file "$RULES_RELEASE_URL/geosite.dat" "$TEMP_DIR/assets/geosite.dat"
+verify_dat "geosite.dat"
 
 # ---- 4. Загрузка правил роутинга для v2rayNG ----
 header "Загрузка правил роутинга"
 
 for rule_file in v2rayng-routing-russia.json v2rayng-only-blocked.json; do
-  url="$REPO/raw/$BRANCH/config/$rule_file"
+  url="$REPO/raw/$BRANCH/mobile/config/$rule_file"
   info "Загрузка $rule_file..."
   if download_file "$url" "$TEMP_DIR/assets/$rule_file"; then
     info "  $rule_file: загружен"
@@ -238,21 +273,13 @@ if [ "$HAS_CLIPBOARD" = true ]; then
     if command -v am &>/dev/null && [ "${INSTALL_V2RAYNG:-false}" = true ]; then
       echo ""
       echo -n "  Открываю v2rayNG ... "
-      if am start -n "${V2RAYNG_PKG:-com.v2ray.ang.fdroid}/.ui.MainActivity" 2>/dev/null; then
+      if [ -n "$V2RAYNG_PKG" ] && am start -n "${V2RAYNG_PKG}/.ui.MainActivity" 2>/dev/null; then
         echo "OK"
         APP_OPENED=true
         sleep 1
       else
-        echo "попытка com.v2ray.ang..."
-        if am start -n "com.v2ray.ang/.ui.MainActivity" 2>/dev/null; then
-          echo "OK"
-          APP_OPENED=true
-          sleep 1
-        else
-          echo "ОШИБКА"
-          warn "Не удалось открыть v2rayNG. Откройте вручную."
-          APP_OPENED=false
-        fi
+        echo "ОШИБКА"
+        warn "Не удалось открыть v2rayNG. Откройте вручную."
       fi
     fi
   fi

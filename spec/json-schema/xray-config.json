@@ -4,10 +4,21 @@
   "title": "Xray-core Config",
   "description": "Схема для конфигурации Xray-core (config-template-xray.json)",
   "type": "object",
+  "additionalProperties": true,
   "properties": {
-    "_warning": { "type": "string" },
-    "_fix": { "type": "string" },
-    "_example_pinned": { "type": "string" },
+    "_warning_allowInsecure": { "type": "string" },
+    "_fix_allowInsecure": { "type": "string" },
+    "_fix_intermediate_ca": { "type": "string" },
+    "_fix_hysteria": { "type": "string" },
+    "_pinned_formats": {
+      "type": "object",
+      "properties": {
+        "hex": { "type": "string" },
+        "openssl": { "type": "string" }
+      }
+    },
+    "_policy_comments": { "type": "object" },
+    "_dns_comments": { "type": "string" },
     "policy": {
       "type": "object",
       "properties": {

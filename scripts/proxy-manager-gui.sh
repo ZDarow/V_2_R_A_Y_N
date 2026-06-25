@@ -11,10 +11,88 @@ SCRIPTS_DIR="$(cd "$(dirname "$0")" && pwd)"
 CONFIG="${CONFIG:-$HOME/.config/v2rayN/config.json}"
 XRAY_EXEC="${XRAY_EXEC:-$HOME/.local/share/v2rayN/bin/xray}"
 [[ -x "$XRAY_EXEC" ]] || XRAY_EXEC="xray"
-ICON="network-vpn"
+LOCK_FILE="/tmp/proxy-manager-gui.lock"
+ICON="dialog-information"
 TITLE="Панель управления v2rayN"
 
+# ─── Блокировка от множественных экземпляров ───────────────────────────────
+acquire_gui_lock() {
+  if ! mkdir "$LOCK_FILE" 2>/dev/null; then
+    local pid
+    pid=$(cat "$LOCK_FILE/pid" 2>/dev/null || echo "")
+    # Проверка на stale lock (PID не существует)
+    if [[ -n "$pid" ]] && ! kill -0 "$pid" 2>/dev/null; then
+      rm -rf "$LOCK_FILE"
+      mkdir "$LOCK_FILE"
+    else
+      echo "Панель уже запущена (PID: ${pid:-unknown}). Используйте единственный экземпляр." >&2
+      exit 1
+    fi
+  fi
+  echo "$$" > "$LOCK_FILE/pid"
+  trap 'rm -rf "$LOCK_FILE"' EXIT
+}
+
 notify() { notify-send "$TITLE" "$1" -t 3000 -i "$ICON" 2>/dev/null || true; }
+
+# ─── Прокси: GNOME / KDE ────────────────────────────────────────────────────
+set_proxy_manual() {
+  # GNOME
+  if command -v gsettings &>/dev/null; then
+    gsettings set org.gnome.system.proxy mode 'manual'
+    gsettings set org.gnome.system.proxy.socks host '127.0.0.1'
+    gsettings set org.gnome.system.proxy.socks port 10808
+    gsettings set org.gnome.system.proxy.http host '127.0.0.1'
+    gsettings set org.gnome.system.proxy.http port 10809
+    gsettings set org.gnome.system.proxy.https host '127.0.0.1'
+    gsettings set org.gnome.system.proxy.https port 10809
+  fi
+  # KDE
+  local kwc
+  kwc=$(command -v kwriteconfig6 2>/dev/null || command -v kwriteconfig5 2>/dev/null || true)
+  if [[ -n "$kwc" ]]; then
+    "$kwc" --file kioslaverc --group "Proxy Settings" --key ProxyType 1
+    "$kwc" --file kioslaverc --group "Proxy Settings" --key httpProxy "http://127.0.0.1:10809"
+    "$kwc" --file kioslaverc --group "Proxy Settings" --key httpsProxy "http://127.0.0.1:10809"
+    "$kwc" --file kioslaverc --group "Proxy Settings" --key socksProxy "socks://127.0.0.1:10808"
+    "$kwc" --file kioslaverc --group "Proxy Settings" --key NoProxyFor "localhost,127.0.0.0/8,::1,*.local,.ru,.su,.xn--p1ai"
+    dbus-send --type=signal /KIO/Scheduler org.kde.KIO.Scheduler.reparseSlaveConfiguration string:"" 2>/dev/null || true
+  fi
+  # Sway / Hyprland / Wayland (env vars)
+  export http_proxy="http://127.0.0.1:10809"
+  export https_proxy="http://127.0.0.1:10809"
+  export socks_proxy="socks5://127.0.0.1:10808"
+  export no_proxy="localhost,127.0.0.0/8,::1,*.local,.ru,.su,.xn--p1ai"
+  export HTTP_PROXY="$http_proxy"
+  export HTTPS_PROXY="$https_proxy"
+  export SOCKS_PROXY="$socks_proxy"
+  export NO_PROXY="$no_proxy"
+}
+
+set_proxy_none() {
+  command -v gsettings &>/dev/null && gsettings set org.gnome.system.proxy mode 'none'
+  local kwc
+  kwc=$(command -v kwriteconfig6 2>/dev/null || command -v kwriteconfig5 2>/dev/null || true)
+  if [[ -n "$kwc" ]]; then
+    "$kwc" --file kioslaverc --group "Proxy Settings" --key ProxyType 0
+    dbus-send --type=signal /KIO/Scheduler org.kde.KIO.Scheduler.reparseSlaveConfiguration string:"" 2>/dev/null || true
+  fi
+}
+
+proxy_status_text() {
+  local pm
+  pm=$(gsettings get org.gnome.system.proxy mode 2>/dev/null | tr -d "'")
+  if [[ "$pm" == "manual" ]]; then echo "🟢 ВКЛ"
+  else
+    local kwc
+    kwc=$(command -v kwriteconfig6 2>/dev/null || command -v kwriteconfig5 2>/dev/null || true)
+    if [[ -n "$kwc" ]] && "$kwc" --file kioslaverc --group "Proxy Settings" --key ProxyType 2>/dev/null | grep -q "1"; then
+      echo "🟢 ВКЛ (KDE)"
+    else
+      echo "🔴 ВЫКЛ"
+    fi
+  fi
+}
 
 # ─── Действия ──────────────────────────────────────────────────────────────
 
@@ -31,14 +109,11 @@ xray_restart() {
     systemctl --user restart xray.service 2>/dev/null && notify "🔄 Xray перезапущен"
 }
 proxy_on() {
-    gsettings set org.gnome.system.proxy mode 'manual'
-    gsettings set org.gnome.system.proxy.socks host '127.0.0.1'; gsettings set org.gnome.system.proxy.socks port 10808
-    gsettings set org.gnome.system.proxy.http host '127.0.0.1'; gsettings set org.gnome.system.proxy.http port 10809
-    gsettings set org.gnome.system.proxy.https host '127.0.0.1'; gsettings set org.gnome.system.proxy.https port 10809
+    set_proxy_manual
     notify "🔌 Прокси включён"
 }
 proxy_off() {
-    gsettings set org.gnome.system.proxy mode 'none'
+    set_proxy_none
     notify "🔌 Прокси выключен"
 }
 
@@ -51,7 +126,18 @@ run_scr() {
 run_term() {
     local s="$1" t="$2"
     [[ ! -f "$s" ]] && { yad --error --text="Не найден: $s" 2>/dev/null; return; }
-    gnome-terminal --title="$t" -- bash -c "bash '$s'; echo; echo 'Нажмите Enter...'; read" 2>/dev/null &
+    local term
+    term=$(command -v x-terminal-emulator 2>/dev/null \
+        || command -v gnome-terminal 2>/dev/null \
+        || command -v konsole 2>/dev/null \
+        || command -v xterm 2>/dev/null \
+        || echo "")
+    [[ -z "$term" ]] && { yad --error --text="Терминал не найден" 2>/dev/null; return; }
+    if [[ "$term" == *konsole* ]]; then
+        "$term" --title "$t" -e bash -c "bash '$s'; echo; echo 'Нажмите Enter...'; read" 2>/dev/null &
+    else
+        "$term" --title="$t" -e bash -c "bash '$s'; echo; echo 'Нажмите Enter...'; read" 2>/dev/null &
+    fi
 }
 
 detect_block() {
@@ -111,8 +197,7 @@ build_status_tab() {
     elif pgrep -x xray >/dev/null; then xr="🟢 PID $(pgrep -x xray | head -1)"
     else xr="🔴 Остановлен"; fi
 
-    local pm; pm=$(gsettings get org.gnome.system.proxy mode 2>/dev/null | tr -d "'")
-    local ps; [[ "$pm" == "manual" ]] && ps="🟢 ВКЛ" || ps="🔴 ВЫКЛ"
+    local ps; ps=$(proxy_status_text)
 
     local s8="○"; ss -tln 2>/dev/null | grep -q ':10808 ' && s8="🟢"
     local s9="○"; ss -tln 2>/dev/null | grep -q ':10809 ' && s9="🟢"
@@ -125,7 +210,7 @@ build_status_tab() {
     yad --plug --tabnum=1 --form \
         --field="<b>● СТАТУС</b>:LBL" \
         --field="🛡️ Xray:LBL" --field="<b>$xr</b>:LBL" \
-        --field="🔌 Прокси GNOME:LBL" --field="<b>$ps</b>:LBL" \
+        --field="🔌 Системный прокси:LBL" --field="<b>$ps</b>:LBL" \
         --field="🔌 Порты:LBL" --field="SOCKS5 :10808 $s8 | HTTP :10809 $s9:LBL" \
         --field="🌍 $xv:LBL" \
         --field="Прямой: $di:LBL" \
@@ -138,7 +223,7 @@ build_control_tab() {
         --field="▶ Запустить:BTN" --field="⏹ Остановить:BTN" \
         --field="🔄 Перезапустить:BTN" :LBL \
         --field=":LBL" :LBL \
-        --field="<b>● Прокси GNOME</b>:LBL" :LBL \
+        --field="<b>● Системный прокси</b>:LBL" :LBL \
         --field="🔌 Включить:BTN" --field="🔌 Выключить:BTN" \
         2>/dev/null &
 }
@@ -160,6 +245,9 @@ build_tools_tab() {
         --field="<b>● Обслуживание</b>:LBL" :LBL \
         --field="🔄 Обновить правила:BTN" --field="🔧 Исправить всё:BTN" \
         --field="♻️ Восстановить:BTN" --field="🔌 Toggle прокси:BTN" \
+        --field=":LBL" :LBL \
+        --field="<b>● Мониторинг</b>:LBL" :LBL \
+        --field="🏥 Health Check:BTN" --field="📋 Статус:BTN" \
         2>/dev/null &
 }
 
@@ -172,6 +260,7 @@ main() {
     if [[ -z "${DISPLAY:-}" && -z "${WAYLAND_DISPLAY:-}" ]]; then
         echo "Ошибка: нет графического окружения (DISPLAY)"; exit 1
     fi
+    acquire_gui_lock
 
     local key=54321
 
@@ -216,8 +305,13 @@ process_result() {
         *"Исправить всё"*)    run_term "$SCRIPTS_DIR/v2ray-fix-all.sh" "Диагностика v2rayN" ;;
         *"Восстановить"*)     run_scr "$SCRIPTS_DIR/restore-all.sh" "Восстановление" ;;
         *"Toggle"*)           
-            local pm; pm=$(gsettings get org.gnome.system.proxy mode 2>/dev/null | tr -d "'")
-            [[ "$pm" == "manual" ]] && proxy_off || proxy_on
+            [[ "$(proxy_status_text)" == *"ВКЛ"* ]] && proxy_off || proxy_on
+            ;;
+        *"Health Check"*)
+            run_scr "$SCRIPTS_DIR/v2ray-health.sh" "Health Check"
+            ;;
+        *"Статус"*)
+            run_scr "$SCRIPTS_DIR/status.sh" "Статус v2rayN"
             ;;
     esac
 }

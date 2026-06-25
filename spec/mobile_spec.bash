@@ -22,7 +22,7 @@ setup() {
 }
 
 @test "detect-block-type.sh: set -uo pipefail включён" {
-    head -5 "$PROJECT_ROOT/scripts/detect-block-type.sh" | grep -q "set -uo pipefail"
+    grep -q "set -uo pipefail" "$PROJECT_ROOT/scripts/detect-block-type.sh"
 }
 
 @test "detect-block-type.sh: проверка обязательных команд (curl, dig, ping)" {

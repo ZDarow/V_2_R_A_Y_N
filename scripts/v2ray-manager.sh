@@ -28,7 +28,8 @@ check_status() {
     
     # 1. Systemd
     sec "1. Systemd юниты"
-    local state=$(systemctl --user is-active "$SERVICE" 2>/dev/null)
+    local state
+    state=$(systemctl --user is-active "$SERVICE" 2>/dev/null)
     if [[ "$state" == "active" ]] || { [[ "$state" == "activating" ]] && pgrep -x xray >/dev/null; }; then
         ok "$SERVICE — активен"
     else
@@ -58,10 +59,12 @@ check_status() {
     if [[ -f "$CONFIG" ]]; then
         if jq empty "$CONFIG" 2>/dev/null; then
             ok "JSON валиден"
-            local inbounds=$(jq '.inbounds | length' "$CONFIG" 2>/dev/null)
-            local outbounds=$(jq '.outbounds | length' "$CONFIG" 2>/dev/null)
+            local inbounds outbounds
+            inbounds=$(jq '.inbounds | length' "$CONFIG" 2>/dev/null)
+            outbounds=$(jq '.outbounds | length' "$CONFIG" 2>/dev/null)
             ok "Inbounds: $inbounds | Outbounds: $outbounds"
-            local active=$(jq -r '.outbounds[] | select(.tag=="proxy") | .settings.vnext[0].address // empty' "$CONFIG" 2>/dev/null)
+            local active
+            active=$(jq -r '.outbounds[] | select(.tag=="proxy") | .settings.vnext[0].address // empty' "$CONFIG" 2>/dev/null)
             [[ -n "$active" ]] && ok "Активный сервер: $active" || warn "Не найден outbound 'proxy'"
         else
             fail "JSON невалиден!"
@@ -74,7 +77,8 @@ check_status() {
     sec "5. Xray-core"
     if [[ -x "$XRAY_BIN" ]]; then
         ok "Бинарник: $XRAY_BIN"
-        local ver=$("$XRAY_BIN" version 2>/dev/null | head -1)
+        local ver
+        ver=$("$XRAY_BIN" version 2>/dev/null | head -1)
         [[ -n "$ver" ]] && ok "Версия: $ver"
     else
         fail "Xray не найден: $XRAY_BIN"
@@ -83,7 +87,8 @@ check_status() {
     # 6. Прокси-связность
     sec "6. Работа через прокси"
     if ss -tln 2>/dev/null | grep -q ":10808 "; then
-        local code=$(curl -sS -o /dev/null -w "%{http_code}" --socks5-hostname 127.0.0.1:10808 -m 5 https://www.google.com 2>/dev/null)
+        local code
+        code=$(curl -sS -o /dev/null -w "%{http_code}" --socks5-hostname 127.0.0.1:10808 -m 5 https://www.google.com 2>/dev/null)
         if [[ "$code" =~ ^(200|301|302)$ ]]; then
             ok "Google через прокси (HTTP $code)"
         else
@@ -95,12 +100,14 @@ check_status() {
     
     # 7. IP
     sec "7. Публичные IP"
-    local direct_ip=$(curl -sS -m 5 https://ipinfo.io/ip 2>/dev/null)
+    local direct_ip
+    direct_ip=$(curl -sS -m 5 https://ipinfo.io/ip 2>/dev/null)
     [[ -n "$direct_ip" ]] && ok "Напрямую: $direct_ip" || warn "Не удалось получить прямой IP"
     
     if ss -tln 2>/dev/null | grep -q ":10808 "; then
-        local proxy_ip=$(curl -sS -m 5 --socks5-hostname 127.0.0.1:10808 https://ipinfo.io/ip 2>/dev/null)
-        if [[ -n "$proxy_ip" ]]; then
+            local proxy_ip
+            proxy_ip=$(curl -sS -m 5 --socks5-hostname 127.0.0.1:10808 https://ipinfo.io/ip 2>/dev/null)
+            if [[ -n "$proxy_ip" ]]; then
             if [[ "$proxy_ip" == "$direct_ip" ]]; then
                 warn "IP через прокси совпадает с прямым — прокси не работает!"
             else
@@ -113,12 +120,14 @@ check_status() {
     
     # 8. Системный прокси
     sec "8. Системный прокси"
-    local mode=$(gsettings get org.gnome.system.proxy mode 2>/dev/null | tr -d "'")
+    local mode
+    mode=$(gsettings get org.gnome.system.proxy mode 2>/dev/null | tr -d "'")
     if [[ "$mode" == "none" ]]; then
         warn "GNOME системный прокси: выключен"
     else
-        local host=$(gsettings get org.gnome.system.proxy.socks host 2>/dev/null | tr -d "'")
-        local port=$(gsettings get org.gnome.system.proxy.socks port 2>/dev/null)
+        local host port
+        host=$(gsettings get org.gnome.system.proxy.socks host 2>/dev/null | tr -d "'")
+        port=$(gsettings get org.gnome.system.proxy.socks port 2>/dev/null)
         ok "GNOME прокси: $mode → $host:$port"
     fi
     
@@ -223,8 +232,9 @@ gui_mode() {
     fi
     
     while true; do
-        local status=$(systemctl --user is-active "$SERVICE" 2>/dev/null)
-        local proxy=$(gsettings get org.gnome.system.proxy mode 2>/dev/null | tr -d "'")
+        local status proxy
+        status=$(systemctl --user is-active "$SERVICE" 2>/dev/null)
+        proxy=$(gsettings get org.gnome.system.proxy mode 2>/dev/null | tr -d "'")
         
         local svc_text prx_text
         if [[ "$status" == "active" ]] || { [[ "$status" == "activating" ]] && pgrep -x xray >/dev/null; }; then
@@ -235,9 +245,11 @@ gui_mode() {
         
         [[ "$proxy" == "manual" ]] && prx_text="✅ Прокси: ВКЛ" || prx_text="❌ Прокси: ВЫКЛ"
         
-        local ip_text=$(curl -s -m 3 --socks5-hostname 127.0.0.1:10808 https://ipinfo.io/ip 2>/dev/null || echo 'нет')
+        local ip_text
+        ip_text=$(curl -s -m 3 --socks5-hostname 127.0.0.1:10808 https://ipinfo.io/ip 2>/dev/null || echo 'нет')
         
-        local choice=$(zenity --width=450 --height=300 --list --title="Менеджер прокси v2rayN" \
+        local choice
+        choice=$(zenity --width=450 --height=300 --list --title="Менеджер прокси v2rayN" \
             --text="$svc_text\n$prx_text\nIP через прокси: $ip_text" \
             --column="Действие" \
             "🔍 Диагностика" \

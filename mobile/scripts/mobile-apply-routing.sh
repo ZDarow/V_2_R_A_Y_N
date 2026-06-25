@@ -62,7 +62,7 @@ fetch_routing_json() {
       ;;
   esac
 
-  url="$REPO/raw/$BRANCH/config/$filename"
+  url="$REPO/raw/$BRANCH/mobile/config/$filename"
   echo "$label"
   echo "$filename"
   echo "$url"
@@ -108,7 +108,7 @@ fi
 
 # ---- Загрузка ----
 header "Загрузка"
-read -r LABEL FILENAME URL < <(fetch_routing_json "$PRESET")
+{ read -r LABEL; read -r FILENAME; read -r URL; } < <(fetch_routing_json "$PRESET")
 info "Пресет: $LABEL"
 
 TEMP_FILE=$(mktemp)

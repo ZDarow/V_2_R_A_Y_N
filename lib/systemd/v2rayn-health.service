@@ -1,0 +1,21 @@
+[Unit]
+Description=v2rayN Health Check — мониторинг состояния
+Documentation=https://github.com/ZDarow/V_2_R_A_Y_N
+Wants=v2rayn.service
+After=v2rayn.service network-online.target
+
+[Service]
+Type=oneshot
+ExecStart=%h/.local/share/v2rayN/bin/v2ray-health.sh --check
+Environment=V2RAYN_HOME=%h/.local/share/v2rayN
+Environment=V2RAYN_CONFIG=%h/.config/v2rayN
+StandardOutput=journal
+StandardError=journal
+PrivateTmp=true
+NoNewPrivileges=true
+ProtectSystem=strict
+ProtectHome=read-only
+ReadWritePaths=%h/.config/v2rayN %h/.local/share/v2rayN
+
+[Install]
+WantedBy=default.target

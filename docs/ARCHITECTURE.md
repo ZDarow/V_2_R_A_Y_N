@@ -141,10 +141,13 @@
 
 ```
 DNS-запрос → Xray-core → Routing:
-  - Если домен в geosite:ru-blocked → proxy → DoH (1.1.1.1, 8.8.8.8)
+  - Если домен в geosite:ru-blocked → proxy → DoH (dns.google, cloudflare-dns.com, dns.yandex.ru, dns.technic.su)
   - Если домен .ru / geoip:ru → direct → системный резолвер
   - Остальное → proxy → DoH
 ```
+
+**DoH-серверы (4 шт.):** Google (8.8.8.8, 8.8.4.4), Cloudflare (1.1.1.1, 1.0.0.1), Yandex (77.88.8.8, 77.88.8.1), Technic (185.238.130.141).  
+Маппинг доменов → IP в `dns.hosts` обеспечивает резолвинг DoH-серверов до включения DNS.
 
 ### Фрагментация (anti-DPI)
 

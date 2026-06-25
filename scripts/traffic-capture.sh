@@ -19,7 +19,6 @@ DURATION=30  # Длительность захвата в секундах
 # Тестовые домены
 BLOCKED_SITES=("twitter.com" "facebook.com" "instagram.com" "linkedin.com" "discord.com")
 RUSSIAN_SITES=("gosuslugi.ru" "yandex.ru" "vk.com" "mail.ru")
-DNS_SERVERS=("8.8.8.8" "1.1.1.1" "77.88.8.8")
 
 mkdir -p "$CAPTURE_DIR"
 
@@ -177,6 +176,7 @@ test_fragmentation() {
     echo "  Тест MTU:"
     for mtu in 1500 1492 1460 1400 1360 1300; do
         echo -n "    MTU $mtu: "
+        # shellcheck disable=SC1010
         if ping -c 1 -M do -s $((mtu - 28)) 8.8.8.8 &>/dev/null; then
             echo -e "${G}✓${N} работает"
         else

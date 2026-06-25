@@ -70,34 +70,30 @@
 ```json
 "dns": {
   "hosts": {
-    "domain:geosite:category-ads-all": "0.0.0.0",
-    "domain:geosite:yandex-ads": "0.0.0.0"
+    "dns.google": ["8.8.8.8", "8.8.4.4"],
+    "dns.cloudflare.com": ["1.1.1.1", "1.0.0.1"],
+    "dns.yandex.net": ["77.88.8.8", "77.88.8.1"],
+    "dns.technic.su": ["185.238.130.141", "2a0a:1f44::1"]
   },
   "servers": [
-    {
-      "address": "https://1.1.1.1/dns-query",
-      "domains": ["geosite:ru-blocked"],
-      "skipFallback": true
-    },
-    {
-      "address": "https://dns.google/dns-query",
-      "domains": ["geosite:ru-blocked"],
-      "skipFallback": true
-    },
+    "https://dns.google/dns-query",
+    "https://cloudflare-dns.com/dns-query",
+    "https://dns.yandex.ru/dns-query",
+    "https://dns.technic.su/dns-query",
     "localhost"
   ],
   "queryStrategy": "UseIP",
   "disableCache": false,
-  "disableFallback": false,
-  "tag": "dns"
+  "disableFallback": false
 }
 ```
 
 **Особенности:**
-- DoH через Cloudflare (1.1.1.1) и Google (8.8.8.8)
-- `skipFallback: true` для DoH-серверов — не переключаться на системный DNS
+- 4 DoH-сервера: Google (8.8.8.8), Cloudflare (1.1.1.1), Yandex (77.88.8.8), Technic (185.238.130.141)
+- `dns.hosts` — маппинг доменов DoH-провайдеров на их IP (чтобы Xray мог резолвить DoH-серверы до того, как DNS заработает)
+- Пятый сервер `localhost` — fallback на системный DNS
 - `queryStrategy: UseIP` — получать и A, и AAAA записи
-- Рекламные домены резолвятся в `0.0.0.0` (блокировка на уровне DNS)
+- Блокировка рекламы выполняется на уровне **роутинга** (`category-ads-all` → block), а не в DNS
 
 ### Inbounds (входящие соединения)
 
@@ -191,8 +187,9 @@ Xray-core слушает два порта на localhost:
  3. geoip:ru-blocked                  → proxy        ← заблокированные IP РФ
  4. DNS (1.0.0.1, 1.1.1.1,           → proxy        ← DoH через прокси
       8.8.8.8, 8.8.4.4)
- 5. UDP 50000-65535                   → proxy        ← Discord VoIP
- 6. geoip:ru                          → direct       ← все IP РФ напрямую
+  5. UDP 50000-65535                   → proxy        ← Discord VoIP
+  6. bittorrent                        → direct       ← торренты напрямую
+  7. geoip:ru                          → direct       ← все IP РФ напрямую
  7. .ru, .su, .xn--p1ai,              → direct       ← российские домены напрямую
     geosite:ru-available-only-inside
  8. geoip:ru-whitelist                → direct       ← CIDR вайтлист (hxehex)
@@ -208,7 +205,7 @@ Xray-core слушает два порта на localhost:
 | **Реклама блокируется приоритетно** | `category-ads-all` → block стоит ВЫШЕ `ru-blocked` → proxy |
 | **Discord VoIP** | UDP 50000-65535 через прокси (этот диапазон блокируется РФ-операторами) |
 | **DNS через прокси** | 1.1.1.1, 8.8.8.8 маршрутизируются через прокси |
-| **BitTorrent** | Идёт через прокси (максимальная приватность) |
+| **BitTorrent** | Идёт напрямую (BitTorrent исключён из прокси, `outboundTag: direct`) |
 
 ---
 
@@ -243,7 +240,7 @@ Xray-core слушает два порта на localhost:
 | Характеристика | routing-russia.json | only_blocked.json |
 |---------------|---------------------|-------------------|
 | **Default outbound** | proxy (всё через VPN) | direct (напрямую) |
-| **BitTorrent** | через прокси | напрямую |
+| **BitTorrent** | напрямую | напрямую |
 | **Расход трафика VPN** | высокий | низкий |
 | **Приватность** | максимальная | средняя |
 | **Когда использовать** | Домашний WiFi, ПК | IP-whitelist, лимитный трафик |

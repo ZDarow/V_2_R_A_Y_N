@@ -1,0 +1,12 @@
+[Unit]
+Description=v2rayN Health Check — запуск каждые 5 минут
+Documentation=https://github.com/ZDarow/V_2_R_A_Y_N
+
+[Timer]
+OnBootSec=2min
+OnUnitActiveSec=5min
+RandomizedDelaySec=30s
+Persistent=true
+
+[Install]
+WantedBy=timers.target

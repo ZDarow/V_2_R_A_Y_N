@@ -14,7 +14,6 @@ step() { echo -e "\n${B}━━━ $* ━━━${N}"; }
 XRAY_BIN="$HOME/.local/share/v2rayN/bin/xray/xray"
 CONFIG="$HOME/.config/v2rayN/config.json"
 XRAY_DIR="$HOME/.local/share/v2rayN/bin/xray"
-BIN_DIR="$HOME/.local/share/v2rayN/bin"
 
 echo -e "${C}╔═══════════════════════════════════════════════════╗${N}"
 echo -e "${C}║  Полная диагностика и исправление v2rayN/Xray   ║${N}"

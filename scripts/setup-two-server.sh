@@ -51,9 +51,8 @@ HELP
 do_check() {
     step "1. Проверка: нужна ли two-server схема"
 
-    local my_ip blocked_ip
+    local my_ip
     my_ip=$(curl -s -m 5 https://ipinfo.io/ip 2>/dev/null)
-    blocked_ip=$(dig +short twitter.com 2>/dev/null | head -1)
 
     if [[ -z "$my_ip" ]]; then
         fail "Не удалось получить внешний IP"

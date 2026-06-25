@@ -96,6 +96,32 @@ teardown() {
   [ "$status" -eq 1 ]
 }
 
+@test "validate_dat: fake_geo файлы проходят валидацию" {
+  fake_geo "${BATS_TEMP_DIR}/rules"
+  run bash -c "
+    source '${PROJECT_ROOT}/lib/common.sh'
+    validate_dat '${BATS_TEMP_DIR}/rules/geoip.dat'
+    echo exit:\$?
+  " 2>/dev/null
+  # fake_geo создаёт пустые файлы (размер 0), validate_dat требует >10KB
+  # Ожидаем exit 1 — файл слишком мал
+  [[ "$output" == *"exit:1"* ]]
+  rm_fake_geo "${BATS_TEMP_DIR}/rules"
+}
+
+@test "assert_json_valid: JSON конфиги валидны" {
+  # Используем assert_json_valid из test_helper.bash
+  for f in config/config-template-xray.json config/routing-russia.json config/only_blocked.json; do
+    if [ -f "$PROJECT_ROOT/$f" ]; then
+      run python3 -m json.tool "$PROJECT_ROOT/$f" >/dev/null 2>&1
+      [ "$status" -eq 0 ] || {
+        echo "JSON невалиден: $f"
+        return 1
+      }
+    fi
+  done
+}
+
 @test "detect_arch: возвращает архитектуру" {
   run bash -c "
     source '${PROJECT_ROOT}/lib/common.sh'

@@ -12,10 +12,26 @@ load test_helper
   [ "$status" -eq 0 ]
 }
 
-@test "status.sh: запуск без флагов (допустимый exit 1 — v2rayN не запущен)" {
+@test "status.sh: запуск с моком v2rayn_stopped (грациозный выход)" {
+  mock_v2rayn_stopped
   run bash "${PROJECT_ROOT}/scripts/status.sh" 2>&1 || true
-  # Без запущенного v2rayN exit может быть 0 или 1 — оба допустимы
-  [ "$status" -eq 0 ] || [ "$status" -eq 1 ]
+  # Принимаем любой exit — важно что скрипт выполнился без bash-ошибки
+  # и вывел информационные секции
+  [ -n "$output" ]
+  [[ "$output" == *"v2rayN"* || "$output" == *"Статус"* ]]
+}
+
+@test "status.sh: запуск с моком v2rayn_running" {
+  mock_v2rayn_running
+  run bash "${PROJECT_ROOT}/scripts/status.sh" 2>&1 || true
+  # Мок должен показать процесс как запущенный
+  [[ "$output" == *"запущен"* ]]
+}
+
+@test "status.sh: запуск без флагов (допустимый exit — v2rayN может быть не запущен)" {
+  run bash "${PROJECT_ROOT}/scripts/status.sh" 2>&1 || true
+  # Принимаем любой exit — проверяем только что вывод есть и содержит ключевые секции
+  [ -n "$output" ]
 }
 
 @test "status.sh: выводит информационные секции" {

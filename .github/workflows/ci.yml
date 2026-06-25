@@ -131,9 +131,11 @@ jobs:
             npm install -g bats 2>/dev/null
       - name: Run BATS tests
         run: |
-          bats --print-output-on-failure spec/common_spec.bash spec/status_spec.bash \
-            spec/install_spec.bash spec/killswitch_spec.bash \
-            spec/mobile_spec.bash 2>/dev/null || true
+            bats --print-output-on-failure \
+              spec/common_spec.bash spec/status_spec.bash \
+              spec/install_spec.bash spec/killswitch_spec.bash \
+              spec/mobile_spec.bash spec/coverage_spec.bash \
+              spec/integration_spec.bash
 
   markdown-check:
     name: Markdown Check

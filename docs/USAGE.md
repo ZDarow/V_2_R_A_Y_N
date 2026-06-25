@@ -320,7 +320,7 @@ Xray-core v26.2.6+ (февраль 2026) полностью удалил `allowI
 ./scripts/migrate-allowinsecure.sh --dry-run
 ```
 
-Подробнее: [FAQ.md](FAQ.md#allowinsecure--что-делать).
+Подробнее: [faq.md](faq.md#allowinsecure--что-делать).
 
 ---
 
